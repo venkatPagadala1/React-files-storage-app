@@ -1,0 +1,96 @@
+@media (max-width: 600px) {
+  .editor-panel.is-preparation-focused .note-topic-table {
+    min-width: 600px;
+  }
+
+  .file-viewer-stage.expanded {
+    inset: 5px;
+    border-radius: 12px;
+  }
+
+  .file-viewer-toolbar {
+    gap: 7px;
+  }
+
+  .file-viewer-tools {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .file-viewer-tools:last-child {
+    flex: 1 1 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .file-viewer-search input {
+    width: clamp(72px, 28vw, 150px);
+  }
+
+  .file-viewer-download span {
+    display: none;
+  }
+
+  .file-viewer-download,
+  .file-viewer-expand {
+    padding: 0 7px;
+    font-size: 0.62rem;
+  }
+
+  .file-viewer-stage.expanded .docx-preview-frame {
+    padding: 8px;
+  }
+}
+
+.share-modal-backdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background: rgb(20 26 45 / 42%);
+  backdrop-filter: blur(4px);
+}
+
+.share-modal {
+  position: relative;
+  width: min(100%, 400px);
+  padding: 30px;
+  border: 1px solid #e8eaf0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 25px 70px rgb(16 24 40 / 20%);
+  text-align: center;
+}
+
+.share-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.share-modal-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 15px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #e9f6f2;
+  color: #0f766e;
+}
+
+.share-modal h2 {
+  margin: 0;
+  color: #292f40;
+  font-size: 1.05rem;
+}
+
+.share-modal p {
+  margin: 11px 0 20px;
+  color: #747d8e;
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+
