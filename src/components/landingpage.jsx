@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowDown,
+  faArrowUp,
   faArrowUpFromBracket,
   faBars,
   faRobot,
@@ -13,6 +14,7 @@ import {
   faFileLines,
   faFolder,
   faFolderPlus,
+  faGripVertical,
   faMagnifyingGlass,
   faMinus,
   faMoon,
@@ -20,6 +22,7 @@ import {
   faRightFromBracket,
   faShareNodes,
   faSun,
+  faThumbtack,
   faTrash,
   faCompress,
   faXmark,
@@ -29,6 +32,7 @@ import {
   deleteItem,
   initializeWorkspace,
   saveFolder,
+  saveFolders,
   saveItem,
 } from "../lib/workspaceStorage.js";
 
@@ -103,6 +107,22 @@ function getFolderPath(folderId, folders) {
   }
 
   return folderPath.join(" / ");
+}
+
+function getSiblingFolders(folders, parentId) {
+  return folders
+    .map((folder, index) => ({ folder, index }))
+    .filter(({ folder }) => (folder.parentId ?? null) === parentId)
+    .sort((first, second) => {
+      const firstOrder = Number.isFinite(first.folder.order)
+        ? first.folder.order
+        : first.index;
+      const secondOrder = Number.isFinite(second.folder.order)
+        ? second.folder.order
+        : second.index;
+      return firstOrder - secondOrder || first.index - second.index;
+    })
+    .map(({ folder }) => folder);
 }
 
 function formatDate(timestamp) {
@@ -275,12 +295,20 @@ function LandingPage() {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
+  const [draftTopics, setDraftTopics] = useState([]);
+  const [isDocumentListHidden, setIsDocumentListHidden] = useState(false);
+  const [draggedTopicId, setDraggedTopicId] = useState(null);
+  const draggedTopicIdRef = useRef(null);
+  const [topicDropTarget, setTopicDropTarget] = useState(null);
   const [draftFolderId, setDraftFolderId] = useState("");
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderParentId, setNewFolderParentId] = useState(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState(null);
+  const [dropPosition, setDropPosition] = useState("before");
+  const [isRootDropTarget, setIsRootDropTarget] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [storageError, setStorageError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -404,9 +432,21 @@ function LandingPage() {
   const fileSearchMatchCount = countMatches(fileDocumentText, previewSearch);
 
   const activeItem = items.find((item) => item.id === selectedItemId) ?? null;
+  const isPreparationTrackerFocused =
+    isDocumentListHidden && (isCreatingNote || activeItem?.kind === "note");
   const activeFilePreviewType =
     activeItem?.kind === "file" ? getFilePreviewType(activeItem) : "unsupported";
   const activeFolder = folders.find((folder) => folder.id === selectedFolderId);
+  const namedDraftTopics = draftTopics.filter((topic) => topic.title.trim());
+  const completedTopicCount = namedDraftTopics.filter(
+    (topic) => topic.status === "done",
+  ).length;
+  const inProgressTopicCount = namedDraftTopics.filter(
+    (topic) => topic.status === "in-progress",
+  ).length;
+  const preparationProgress = namedDraftTopics.length
+    ? Math.round((completedTopicCount / namedDraftTopics.length) * 100)
+    : 0;
   const selectedFolderIds = useMemo(
     () =>
       selectedFolderId === "all"
@@ -415,9 +455,24 @@ function LandingPage() {
     [folders, selectedFolderId],
   );
   const isNoteDraftDirty = isCreatingNote
-    ? draftTitle.trim().length > 0 || draftContent.trim().length > 0
+    ? draftTitle.trim().length > 0 ||
+      draftContent.trim().length > 0 ||
+    draftTopics.length > 0
     : activeItem?.kind === "note" &&
-      (draftTitle !== activeItem.title || draftContent !== activeItem.content);
+      (draftTitle !== activeItem.title ||
+        draftContent !== activeItem.content ||
+        draftFolderId !== activeItem.folderId ||
+        JSON.stringify(draftTopics) !==
+          JSON.stringify(
+            (activeItem.topics ?? []).map((topic) => ({
+              id: topic.id,
+              title: topic.title,
+              importantNotes: topic.importantNotes ?? "",
+              issues: topic.issues ?? "",
+              pinned: topic.pinned ?? false,
+              status: topic.status,
+            })),
+          ));
   const isFileDraftDirty =
     isEditingFile && fileDraftContent !== savedFileContent;
   const isDraftDirty = isNoteDraftDirty || isFileDraftDirty;
@@ -588,6 +643,7 @@ function LandingPage() {
     setPreviewSearch("");
     setSelectedFolderId(folderId);
     setSelectedItemId(null);
+    setIsDocumentListHidden(false);
     setFilePreviewUrl("");
     setIsEditingFile(false);
     setIsExternalEditActive(false);
@@ -596,6 +652,7 @@ function LandingPage() {
     setIsCreatingNote(false);
     setDraftTitle("");
     setDraftContent("");
+    setDraftTopics([]);
     setIsSidebarOpen(false);
   }
 
@@ -605,6 +662,7 @@ function LandingPage() {
     setIsFileViewerOpen(false);
     setPreviewSearch("");
     setSelectedItemId(item.id);
+    setIsDocumentListHidden(item.kind === "note");
     setFilePreviewUrl(createFilePreviewUrl(item));
     setIsEditingFile(false);
     setIsExternalEditActive(false);
@@ -613,9 +671,187 @@ function LandingPage() {
     setIsCreatingNote(false);
     setDraftTitle(item.title);
     setDraftContent(item.content ?? "");
+    setDraftTopics(
+      item.kind === "note"
+        ? (item.topics ?? []).map((topic, index) => ({
+            id: topic.id ?? `topic-${index}`,
+            title: topic.title ?? "",
+            importantNotes: topic.importantNotes ?? "",
+            issues: topic.issues ?? "",
+            pinned: topic.pinned ?? false,
+            status: ["not-started", "in-progress", "done"].includes(topic.status)
+              ? topic.status
+              : "not-started",
+          }))
+        : [],
+    );
     setDraftFolderId(item.folderId);
     if (item.kind === "file") {
       void loadFileDocument(item);
+    }
+  }
+
+  function handleDragStart(event, payload) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-vsr-workspace-item", JSON.stringify(payload));
+  }
+
+  function handleFolderDragOver(event, folderId) {
+    if (!event.dataTransfer.types.includes("application/x-vsr-workspace-item")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setDropTargetFolderId(folderId);
+    setDropPosition(event.clientY < bounds.top + bounds.height / 2 ? "before" : "after");
+    setIsRootDropTarget(false);
+  }
+
+  function handleRootDragOver(event) {
+    if (!event.dataTransfer.types.includes("application/x-vsr-workspace-item")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTargetFolderId(null);
+    setIsRootDropTarget(true);
+  }
+
+  async function handleDropOnFolder(event, targetFolderId) {
+    event.preventDefault();
+    setDropTargetFolderId(null);
+    setDropPosition("before");
+    setIsRootDropTarget(false);
+
+    const serializedPayload = event.dataTransfer.getData("application/x-vsr-workspace-item");
+    if (!serializedPayload) return;
+
+    let payload;
+    try {
+      payload = JSON.parse(serializedPayload);
+    } catch (error) {
+      console.error("Could not read the dragged workspace item.", error);
+      setStatusMessage("Could not move this item because its drag data is invalid.");
+      return;
+    }
+
+    const targetFolder = folders.find((folder) => folder.id === targetFolderId);
+    if (!targetFolder) return;
+    if (!confirmDiscardDraft()) return;
+
+    try {
+      if (payload.type === "item") {
+        const item = items.find((candidate) => candidate.id === payload.id);
+        if (!item || item.folderId === targetFolderId) return;
+        const movedItem = {
+          ...item,
+          folderId: targetFolderId,
+          updatedAt: getCurrentTimestamp(),
+        };
+        await saveItem(movedItem);
+        setItems((currentItems) =>
+          currentItems.map((candidate) =>
+            candidate.id === movedItem.id ? movedItem : candidate,
+          ),
+        );
+        if (selectedItemId === movedItem.id) {
+          setSelectedFolderId(targetFolderId);
+          setDraftFolderId(targetFolderId);
+        }
+        setStatusMessage(`Moved "${item.title}" to "${getFolderPath(targetFolderId, folders)}".`);
+        return;
+      }
+
+      if (payload.type !== "folder") return;
+      const sourceFolder = folders.find((folder) => folder.id === payload.id);
+      if (!sourceFolder) return;
+      if (sourceFolder.id === targetFolderId) return;
+
+      const sourceParentId = sourceFolder.parentId ?? null;
+      const targetParentId = targetFolder.parentId ?? null;
+      if (sourceParentId !== targetParentId) {
+        setStatusMessage("Folders can be reordered among folders at the same level. Drop files or notes to move them into a folder.");
+        return;
+      }
+
+      const siblings = getSiblingFolders(folders, sourceParentId);
+      const sourceIndex = siblings.findIndex((folder) => folder.id === sourceFolder.id);
+      const targetIndex = siblings.findIndex((folder) => folder.id === targetFolder.id);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+
+      const reordered = siblings.filter((folder) => folder.id !== sourceFolder.id);
+      const insertionIndex =
+        targetIndex + (dropPosition === "after" ? 1 : 0) - (sourceIndex < targetIndex ? 1 : 0);
+      reordered.splice(insertionIndex, 0, sourceFolder);
+      if (reordered.every((folder, index) => folder.id === siblings[index].id)) return;
+
+      const reorderedFolders = reordered.map((folder, order) => ({
+        ...folder,
+        order,
+      }));
+      await saveFolders(reorderedFolders);
+      setFolders((currentFolders) =>
+        currentFolders.map((folder) =>
+          reorderedFolders.find((candidate) => candidate.id === folder.id) ?? folder,
+        ),
+      );
+      setStatusMessage(`Reordered "${sourceFolder.name}" among its sibling folders.`);
+    } catch (error) {
+      setStatusMessage(`Could not move item: ${error.message}`);
+    }
+  }
+
+  async function handleDropOnRoot(event) {
+    event.preventDefault();
+    setDropTargetFolderId(null);
+    setIsRootDropTarget(false);
+
+    const serializedPayload = event.dataTransfer.getData("application/x-vsr-workspace-item");
+    if (!serializedPayload) return;
+
+    let payload;
+    try {
+      payload = JSON.parse(serializedPayload);
+    } catch (error) {
+      console.error("Could not read the dragged workspace item.", error);
+      setStatusMessage("Could not move this item because its drag data is invalid.");
+      return;
+    }
+
+    if (payload.type !== "folder") {
+      setStatusMessage("Drop files and notes onto a folder to move them.");
+      return;
+    }
+    const sourceFolder = folders.find((folder) => folder.id === payload.id);
+    if (!sourceFolder || !sourceFolder.parentId) return;
+    if (!confirmDiscardDraft()) return;
+    if (
+      folders.some(
+        (folder) =>
+          folder.id !== sourceFolder.id &&
+          (folder.parentId ?? null) === null &&
+          folder.name.toLocaleLowerCase() === sourceFolder.name.toLocaleLowerCase(),
+      )
+    ) {
+      setStatusMessage(`A top-level folder named "${sourceFolder.name}" already exists.`);
+      return;
+    }
+
+    try {
+      const topLevelFolders = getSiblingFolders(folders, null).filter(
+        (folder) => folder.id !== sourceFolder.id,
+      );
+      topLevelFolders.push({ ...sourceFolder, parentId: null });
+      const reorderedFolders = topLevelFolders.map((folder, order) => ({
+        ...folder,
+        order,
+      }));
+      await saveFolders(reorderedFolders);
+      setFolders((currentFolders) =>
+        currentFolders.map((folder) =>
+          reorderedFolders.find((candidate) => candidate.id === folder.id) ?? folder,
+        ),
+      );
+      setStatusMessage(`Moved "${sourceFolder.name}" to the top level.`);
+    } catch (error) {
+      setStatusMessage(`Could not move folder: ${error.message}`);
     }
   }
 
@@ -627,6 +863,7 @@ function LandingPage() {
     const destinationFolderId =
       selectedFolderId === "all" ? folders[0]?.id : selectedFolderId;
     setSelectedItemId(null);
+    setIsDocumentListHidden(false);
     setFilePreviewUrl("");
     setIsEditingFile(false);
     setIsExternalEditActive(false);
@@ -635,7 +872,133 @@ function LandingPage() {
     setIsCreatingNote(true);
     setDraftTitle("");
     setDraftContent("");
+    setDraftTopics([]);
     setDraftFolderId(destinationFolderId ?? "");
+  }
+
+  function addPreparationTopic() {
+    setIsDocumentListHidden(true);
+    setDraftTopics((topics) => [
+      ...topics,
+      {
+        id: createId(),
+        title: "",
+        importantNotes: "",
+        issues: "",
+        pinned: false,
+        status: "not-started",
+      },
+    ]);
+  }
+
+  function updatePreparationTopic(topicId, changes) {
+    setDraftTopics((topics) =>
+      topics.map((topic) =>
+        topic.id === topicId ? { ...topic, ...changes } : topic,
+      ),
+    );
+  }
+
+  function removePreparationTopic(topicId) {
+    setDraftTopics((topics) => topics.filter((topic) => topic.id !== topicId));
+  }
+
+  function setPreparationTopicPinned(topicId, pinned) {
+    setDraftTopics((topics) => {
+      const topic = topics.find((entry) => entry.id === topicId);
+      if (!topic) return topics;
+
+      const updatedTopic = { ...topic, pinned };
+      const remainingTopics = topics.filter((entry) => entry.id !== topicId);
+      const insertAt = pinned
+        ? remainingTopics.findIndex((entry) => !entry.pinned)
+        : remainingTopics.filter((entry) => entry.pinned).length;
+      const nextTopics = [...remainingTopics];
+      nextTopics.splice(insertAt < 0 ? nextTopics.length : insertAt, 0, updatedTopic);
+      return nextTopics;
+    });
+  }
+
+  function movePreparationTopic(topicId, direction) {
+    setDraftTopics((topics) => {
+      const index = topics.findIndex((topic) => topic.id === topicId);
+      const nextIndex = index + direction;
+      if (
+        index < 0 ||
+        nextIndex < 0 ||
+        nextIndex >= topics.length ||
+        topics[index].pinned !== topics[nextIndex].pinned
+      ) {
+        return topics;
+      }
+
+      const nextTopics = [...topics];
+      [nextTopics[index], nextTopics[nextIndex]] = [
+        nextTopics[nextIndex],
+        nextTopics[index],
+      ];
+      return nextTopics;
+    });
+  }
+
+  function handleTopicDragStart(event, topicId) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-vsr-preparation-topic", topicId);
+    event.dataTransfer.setData("text/plain", topicId);
+    draggedTopicIdRef.current = topicId;
+    setDraggedTopicId(topicId);
+  }
+
+  function handleTopicDragOver(event, targetTopic) {
+    const sourceTopic = draftTopics.find(
+      (topic) => topic.id === draggedTopicIdRef.current,
+    );
+    if (!sourceTopic || sourceTopic.pinned !== targetTopic.pinned) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setTopicDropTarget({
+      id: targetTopic.id,
+      position: event.clientY < bounds.top + bounds.height / 2 ? "before" : "after",
+    });
+  }
+
+  function handleTopicDrop(event, targetTopic) {
+    event.preventDefault();
+    const sourceTopicId =
+      draggedTopicIdRef.current ||
+      event.dataTransfer.getData("application/x-vsr-preparation-topic") ||
+      event.dataTransfer.getData("text/plain");
+    const sourceTopic = draftTopics.find((topic) => topic.id === sourceTopicId);
+    if (
+      !sourceTopic ||
+      sourceTopic.id === targetTopic.id ||
+      sourceTopic.pinned !== targetTopic.pinned
+    ) {
+      draggedTopicIdRef.current = null;
+      setDraggedTopicId(null);
+      setTopicDropTarget(null);
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const droppedAfterMidpoint =
+      event.clientY >= bounds.top + bounds.height / 2;
+    setDraftTopics((topics) => {
+      const remainingTopics = topics.filter((topic) => topic.id !== sourceTopicId);
+      const targetIndex = remainingTopics.findIndex(
+        (topic) => topic.id === targetTopic.id,
+      );
+      if (targetIndex < 0) return topics;
+
+      const insertAt = targetIndex + (droppedAfterMidpoint ? 1 : 0);
+      remainingTopics.splice(insertAt, 0, sourceTopic);
+      return remainingTopics;
+    });
+    draggedTopicIdRef.current = null;
+    setDraggedTopicId(null);
+    setTopicDropTarget(null);
   }
 
   async function handleSaveNote(event) {
@@ -651,12 +1014,23 @@ function LandingPage() {
     }
 
     const now = getCurrentTimestamp();
+    const topics = draftTopics
+      .filter((topic) => topic.title.trim())
+      .map((topic) => ({
+        id: topic.id,
+        title: topic.title.trim(),
+        importantNotes: topic.importantNotes.trim(),
+        issues: topic.issues.trim(),
+        pinned: topic.pinned,
+        status: topic.status,
+      }));
     const note = {
       id: isCreatingNote ? createId() : activeItem.id,
       kind: "note",
       folderId: draftFolderId,
       title,
       content: draftContent,
+      topics,
       createdAt: isCreatingNote ? now : activeItem.createdAt,
       updatedAt: now,
     };
@@ -672,6 +1046,7 @@ function LandingPage() {
       setFilePreviewUrl("");
       setSelectedFolderId(note.folderId);
       setSearchQuery("");
+      setDraftTopics(topics);
       setIsCreatingNote(false);
       setStatusMessage("Note saved on this device.");
     } catch (error) {
@@ -702,17 +1077,19 @@ function LandingPage() {
       return;
     }
 
+    const siblingFolders = getSiblingFolders(folders, newFolderParentId);
     const folder = {
       id: createId(),
       name,
       parentId: newFolderParentId,
+      order: siblingFolders.length,
       color: folderColors[folders.length % folderColors.length],
     };
     try {
       await saveFolder(folder);
       setFolders((currentFolders) => [...currentFolders, folder]);
       setSelectedFolderId(folder.id);
-      setDraftFolderId(folder.id);
+      if (!activeItem || isCreatingNote) setDraftFolderId(folder.id);
       setNewFolderName("");
       setIsAddingFolder(false);
       setNewFolderParentId(null);
@@ -912,6 +1289,7 @@ function LandingPage() {
         setSavedFileContent("");
         setDraftTitle("");
         setDraftContent("");
+        setDraftTopics([]);
         setIsCreatingNote(false);
       }
       setStatusMessage(`Deleted "${itemToDelete.title}" from this device.`);
@@ -948,6 +1326,7 @@ function LandingPage() {
         setIsCreatingNote(false);
         setDraftTitle("");
         setDraftContent("");
+        setDraftTopics([]);
       }
       setStatusMessage(`Deleted "${folder.name}".`);
     } catch (error) {
@@ -1152,9 +1531,7 @@ function LandingPage() {
   function renderFolderTree(parentId = null, depth = 0) {
     if (depth > folders.length) return null;
 
-    return folders
-      .filter((folder) => (folder.parentId ?? null) === parentId)
-      .map((folder) => {
+    return getSiblingFolders(folders, parentId).map((folder) => {
         const folderItems = items
           .filter((item) => item.folderId === folder.id)
           .sort((first, second) => second.updatedAt - first.updatedAt);
@@ -1163,11 +1540,32 @@ function LandingPage() {
 
         return (
           <div className="folder-group" key={folder.id}>
-            <div className="folder-row" style={{ paddingLeft: `${depth * 14}px` }}>
+            <div
+              className={`folder-row ${dropTargetFolderId === folder.id ? `is-drop-target drop-${dropPosition}` : ""}`}
+              style={{ paddingLeft: `${depth * 14}px` }}
+              onDragOver={(event) => handleFolderDragOver(event, folder.id)}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setDropTargetFolderId(null);
+                  setDropPosition("before");
+                }
+              }}
+              onDrop={(event) => void handleDropOnFolder(event, folder.id)}
+            >
               <button
                 type="button"
                 className={`sidebar-link ${selectedFolderId === folder.id ? "active" : ""}`}
                 onClick={() => selectFolder(folder.id)}
+                draggable
+                onDragStart={(event) =>
+                  handleDragStart(event, { type: "folder", id: folder.id })
+                }
+                onDragEnd={() => {
+                  setDropTargetFolderId(null);
+                  setDropPosition("before");
+                  setIsRootDropTarget(false);
+                }}
+                title={`Drag ${folder.name} onto a sibling folder to reorder it`}
               >
                 <FontAwesomeIcon
                   icon={faFolder}
@@ -1214,6 +1612,15 @@ function LandingPage() {
                     className={`folder-document-link ${selectedItemId === item.id ? "active" : ""}`}
                     key={item.id}
                     onClick={() => selectItem(item)}
+                    draggable
+                    onDragStart={(event) =>
+                      handleDragStart(event, { type: "item", id: item.id })
+                    }
+                    onDragEnd={() => {
+                      setDropTargetFolderId(null);
+                      setDropPosition("before");
+                      setIsRootDropTarget(false);
+                    }}
                     aria-current={selectedItemId === item.id ? "page" : undefined}
                     title={item.title}
                   >
@@ -1473,7 +1880,13 @@ function LandingPage() {
           <span className="sidebar-count">{items.length}</span>
         </button>
 
-        <div className="sidebar-section-heading">
+        <div
+          className={`sidebar-section-heading ${isRootDropTarget ? "is-drop-target" : ""}`}
+          onDragOver={handleRootDragOver}
+          onDragLeave={() => setIsRootDropTarget(false)}
+          onDrop={handleDropOnRoot}
+          title="Drop a subfolder here to move it to the top level"
+        >
           <span>YOUR FOLDERS</span>
           <button
             type="button"
@@ -1578,7 +1991,9 @@ function LandingPage() {
           </button>
         </header>
 
-        <div className="workspace-content">
+        <div
+          className={`workspace-content${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+        >
           <div className="workspace-heading">
             <div>
               <span className="workspace-overline">LOCAL WORKSPACE · NOT SECURE STORAGE</span>
@@ -1658,8 +2073,11 @@ function LandingPage() {
               Try enabling site storage in your browser settings, then reload.
             </div>
           ) : (
-            <div className="workspace-grid">
-              <section className="documents-panel" aria-label="Documents">
+            <div
+              className={`workspace-grid${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+            >
+              {!isPreparationTrackerFocused && (
+                <section className="documents-panel" aria-label="Documents">
                 <div className="documents-panel-heading">
                   <div>
                     <h2>{searchQuery ? "Results" : "Recent documents"}</h2>
@@ -1691,6 +2109,16 @@ function LandingPage() {
                             type="button"
                             className={`document-row ${selectedItemId === item.id ? "selected" : ""}`}
                             onClick={() => selectItem(item)}
+                            draggable
+                            onDragStart={(event) =>
+                              handleDragStart(event, { type: "item", id: item.id })
+                            }
+                            onDragEnd={() => {
+                              setDropTargetFolderId(null);
+                              setDropPosition("before");
+                              setIsRootDropTarget(false);
+                            }}
+                            title={`Drag ${item.title} onto a folder to move it`}
                             aria-pressed={selectedItemId === item.id}
                           >
                             <span
@@ -1738,9 +2166,13 @@ function LandingPage() {
                     })}
                   </div>
                 )}
-              </section>
+                </section>
+              )}
 
-              <section className="editor-panel" aria-label="Document editor">
+              <section
+                className={`editor-panel${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+                aria-label="Document editor"
+              >
                 {isCreatingNote || activeItem?.kind === "note" ? (
                   <form className="note-editor" onSubmit={handleSaveNote}>
                     <div className="editor-topline">
@@ -1748,17 +2180,28 @@ function LandingPage() {
                         <FontAwesomeIcon icon={faFileLines} />
                         {isCreatingNote ? "NEW NOTE" : "NOTE"}
                       </span>
-                      {activeItem && (
+                      <div className="note-editor-actions">
+                        {isPreparationTrackerFocused && (
+                          <button
+                            type="button"
+                            className="note-focus-return"
+                            onClick={() => setIsDocumentListHidden(false)}
+                          >
+                            Show documents
+                          </button>
+                        )}
+                        {activeItem && (
                         <button
                           type="button"
                           className="icon-button danger-icon-button"
-                          onClick={handleDeleteItem}
+                          onClick={() => handleDeleteItem()}
                           aria-label="Delete note"
                           title="Delete note"
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     <label className="editor-label" htmlFor="note-title">
@@ -1791,8 +2234,244 @@ function LandingPage() {
                       ))}
                     </select>
 
+                    <section className="note-topics-panel" aria-label="Preparation topics">
+                      <div className="note-topics-heading">
+                        <div>
+                          <span className="editor-label">Interview preparation tracker</span>
+                          <span className="note-topics-hint">
+                            Pin key topics, then order each group from highest to lowest priority.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="note-topic-add"
+                          onClick={addPreparationTopic}
+                        >
+                          <FontAwesomeIcon icon={faPlus} />
+                          Add topic
+                        </button>
+                      </div>
+                      {namedDraftTopics.length > 0 && (
+                        <div className="preparation-progress" aria-live="polite">
+                          <div className="preparation-progress-summary">
+                            <span>
+                              <strong>{completedTopicCount}</strong> of{" "}
+                              {namedDraftTopics.length} topics complete
+                            </span>
+                            <span>{preparationProgress}%</span>
+                          </div>
+                          <div
+                            className="preparation-progress-track"
+                            role="progressbar"
+                            aria-label="Interview preparation progress"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={preparationProgress}
+                          >
+                            <span style={{ width: `${preparationProgress}%` }} />
+                          </div>
+                          <div className="preparation-progress-counts">
+                            <span>{inProgressTopicCount} in progress</span>
+                            <span>
+                              {namedDraftTopics.length -
+                                completedTopicCount -
+                                inProgressTopicCount}{" "}
+                              not started
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {draftTopics.length > 0 ? (
+                        <div className="note-topic-table-wrap">
+                          <table className="note-topic-table">
+                            <thead>
+                              <tr>
+                                <th scope="col">Topic</th>
+                                <th scope="col">Important notes</th>
+                                <th scope="col">Issues to revisit</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">
+                                  <span className="visually-hidden">Actions</span>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {draftTopics.map((topic, index) => (
+                                <tr
+                                  key={topic.id}
+                                  className={[
+                                    draggedTopicId === topic.id ? "is-dragging" : "",
+                                    topicDropTarget?.id === topic.id
+                                      ? `topic-drop-${topicDropTarget.position}`
+                                      : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                  onDragOver={(event) =>
+                                    handleTopicDragOver(event, topic)
+                                  }
+                                  onDrop={(event) => handleTopicDrop(event, topic)}
+                                  onDragLeave={(event) => {
+                                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                                      setTopicDropTarget(null);
+                                    }
+                                  }}
+                                >
+                                  <td data-label="Topic">
+                                    <input
+                                      type="text"
+                                      value={topic.title}
+                                      onChange={(event) =>
+                                        updatePreparationTopic(topic.id, {
+                                          title: event.target.value,
+                                        })
+                                      }
+                                      placeholder={`Topic ${index + 1}`}
+                                      aria-label={`Preparation topic ${index + 1}`}
+                                      maxLength={120}
+                                    />
+                                  </td>
+                                  <td data-label="Important notes">
+                                    <textarea
+                                      value={topic.importantNotes}
+                                      onChange={(event) =>
+                                        updatePreparationTopic(topic.id, {
+                                          importantNotes: event.target.value,
+                                        })
+                                      }
+                                      placeholder="Key ideas, examples, and explanations"
+                                      maxLength={1500}
+                                      aria-label={`Important notes for topic ${index + 1}`}
+                                      rows={2}
+                                    />
+                                  </td>
+                                  <td data-label="Issues to revisit">
+                                    <textarea
+                                      value={topic.issues}
+                                      onChange={(event) =>
+                                        updatePreparationTopic(topic.id, {
+                                          issues: event.target.value,
+                                        })
+                                      }
+                                      placeholder="Questions, gaps, or practice to revisit"
+                                      maxLength={1000}
+                                      aria-label={`Gaps or issues for topic ${index + 1}`}
+                                      rows={2}
+                                    />
+                                  </td>
+                                  <td data-label="Status">
+                                    <select
+                                      value={topic.status}
+                                      onChange={(event) =>
+                                        updatePreparationTopic(topic.id, {
+                                          status: event.target.value,
+                                        })
+                                      }
+                                      aria-label={`Status for topic ${index + 1}`}
+                                      className={`topic-status-select status-${topic.status}`}
+                                    >
+                                      <option value="not-started">Not started</option>
+                                      <option value="in-progress">In progress</option>
+                                      <option value="done">Done</option>
+                                    </select>
+                                  </td>
+                                  <td data-label="Priority">
+                                    <div className="topic-priority-controls">
+                                      <button
+                                        type="button"
+                                        className="topic-drag-handle"
+                                        draggable
+                                        onDragStart={(event) =>
+                                          handleTopicDragStart(event, topic.id)
+                                        }
+                                        onDragEnd={() => {
+                                          draggedTopicIdRef.current = null;
+                                          setDraggedTopicId(null);
+                                          setTopicDropTarget(null);
+                                        }}
+                                        aria-label={`Drag ${topic.title || `topic ${index + 1}`} to change priority`}
+                                        title="Drag to change priority"
+                                      >
+                                        <FontAwesomeIcon icon={faGripVertical} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={`topic-pin-button${topic.pinned ? " is-pinned" : ""}`}
+                                        onClick={() =>
+                                          setPreparationTopicPinned(
+                                            topic.id,
+                                            !topic.pinned,
+                                          )
+                                        }
+                                        aria-label={`${topic.pinned ? "Unpin" : "Pin"} ${topic.title || `topic ${index + 1}`}`}
+                                        aria-pressed={Boolean(topic.pinned)}
+                                        title={topic.pinned ? "Unpin topic" : "Pin to top"}
+                                      >
+                                        <FontAwesomeIcon icon={faThumbtack} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="topic-priority-button"
+                                        onClick={() =>
+                                          movePreparationTopic(topic.id, -1)
+                                        }
+                                        disabled={
+                                          index === 0 ||
+                                          draftTopics[index - 1].pinned !== topic.pinned
+                                        }
+                                        aria-label={`Move ${topic.title || `topic ${index + 1}`} up in priority`}
+                                        title="Move up"
+                                      >
+                                        <FontAwesomeIcon icon={faArrowUp} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="topic-priority-button"
+                                        onClick={() =>
+                                          movePreparationTopic(topic.id, 1)
+                                        }
+                                        disabled={
+                                          index === draftTopics.length - 1 ||
+                                          draftTopics[index + 1].pinned !== topic.pinned
+                                        }
+                                        aria-label={`Move ${topic.title || `topic ${index + 1}`} down in priority`}
+                                        title="Move down"
+                                      >
+                                        <FontAwesomeIcon icon={faArrowDown} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td data-label="Actions">
+                                    <button
+                                      type="button"
+                                      className="note-topic-remove"
+                                      onClick={() => removePreparationTopic(topic.id)}
+                                      aria-label={`Remove preparation topic ${index + 1}`}
+                                      title="Remove topic"
+                                    >
+                                      <FontAwesomeIcon icon={faXmark} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="note-topics-empty">
+                          <strong>Build your interview study plan</strong>
+                          <span>
+                            Add topics such as fundamentals, system design, or practice
+                            questions. For each one, keep your key notes and list anything
+                            you need to revisit.
+                          </span>
+                        </div>
+                      )}
+                    </section>
+
                     <label className="editor-label" htmlFor="note-content">
-                      Your notes
+                      Overall interview notes
                     </label>
                     <textarea
                       id="note-content"

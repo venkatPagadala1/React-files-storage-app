@@ -117,6 +117,15 @@ export async function saveFolder(folder) {
   await completion;
 }
 
+export async function saveFolders(folders) {
+  const database = await openDatabase();
+  const transaction = database.transaction(FOLDERS_STORE, "readwrite");
+  const completion = transactionCompletion(transaction);
+  const store = transaction.objectStore(FOLDERS_STORE);
+  folders.forEach((folder) => store.put(folder));
+  await completion;
+}
+
 export async function saveItem(item) {
   const database = await openDatabase();
   const transaction = database.transaction(ITEMS_STORE, "readwrite");
