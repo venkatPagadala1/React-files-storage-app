@@ -31,6 +31,7 @@ import WorkspaceHeader from "./components/WorkspaceHeader.jsx";
 import WelcomePage from "./components/WelcomePage.jsx";
 import DocumentList from "./components/DocumentList.jsx";
 import FileDetails from "../files/components/FileDetails.jsx";
+import Whiteboard from "../whiteboard/Whiteboard.jsx";
 import useFilePreview from "../files/hooks/useFilePreview.js";
 import {
   deleteFolderAndItems,
@@ -49,6 +50,7 @@ function WorkspaceApp() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [draftTopics, setDraftTopics] = useState([]);
+  const [draftBoardStrokes, setDraftBoardStrokes] = useState([]);
   const [isDocumentListHidden, setIsDocumentListHidden] = useState(false);
   const [draggedTopicId, setDraggedTopicId] = useState(null);
   const draggedTopicIdRef = useRef(null);
@@ -69,6 +71,7 @@ function WorkspaceApp() {
   const [isSignoutInfoOpen, setIsSignoutInfoOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
+  const [isBoardOpen, setIsBoardOpen] = useState(false);
   const [signupFirstName, setSignupFirstName] = useState("");
   const [signupLastName, setSignupLastName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -192,7 +195,8 @@ function WorkspaceApp() {
   const isNoteDraftDirty = isCreatingNote
     ? draftTitle.trim().length > 0 ||
       draftContent.trim().length > 0 ||
-    draftTopics.length > 0
+      draftTopics.length > 0 ||
+      draftBoardStrokes.length > 0
     : activeItem?.kind === "note" &&
       (draftTitle !== activeItem.title ||
         draftContent !== activeItem.content ||
@@ -207,7 +211,9 @@ function WorkspaceApp() {
               pinned: topic.pinned ?? false,
               status: topic.status,
             })),
-          ));
+          ) ||
+        JSON.stringify(draftBoardStrokes) !==
+          JSON.stringify(activeItem.boardStrokes ?? []));
   const isFileDraftDirty =
     isEditingFile && fileDraftContent !== savedFileContent;
   const isDraftDirty = isNoteDraftDirty || isFileDraftDirty;
@@ -264,6 +270,7 @@ function WorkspaceApp() {
 
   function selectFolder(folderId) {
     if (!confirmDiscardDraft()) return;
+    setIsBoardOpen(false);
     clearFileDocument();
     setIsFileViewerOpen(false);
     setPreviewSearch("");
@@ -279,11 +286,13 @@ function WorkspaceApp() {
     setDraftTitle("");
     setDraftContent("");
     setDraftTopics([]);
+    setDraftBoardStrokes([]);
     setIsSidebarOpen(false);
   }
 
   function selectItem(item) {
     if (!confirmDiscardDraft()) return;
+    setIsBoardOpen(false);
     clearFileDocument();
     setIsFileViewerOpen(false);
     setPreviewSearch("");
@@ -309,6 +318,11 @@ function WorkspaceApp() {
               ? topic.status
               : "not-started",
           }))
+        : [],
+    );
+    setDraftBoardStrokes(
+      item.kind === "note" && Array.isArray(item.boardStrokes)
+        ? item.boardStrokes
         : [],
     );
     setDraftFolderId(item.folderId);
@@ -499,6 +513,7 @@ function WorkspaceApp() {
     setDraftTitle("");
     setDraftContent("");
     setDraftTopics([]);
+    setDraftBoardStrokes([]);
     setDraftFolderId(destinationFolderId ?? "");
   }
 
@@ -657,6 +672,7 @@ function WorkspaceApp() {
       title,
       content: draftContent,
       topics,
+      boardStrokes: draftBoardStrokes,
       createdAt: isCreatingNote ? now : activeItem.createdAt,
       updatedAt: now,
     };
@@ -1044,6 +1060,7 @@ function WorkspaceApp() {
         items={items}
         folderCounts={folderCounts}
         selectedFolderId={selectedFolderId}
+        isBoardOpen={isBoardOpen}
         selectedItemId={selectedItemId}
         isAddingFolder={isAddingFolder}
         newFolderParentId={newFolderParentId}
@@ -1054,6 +1071,11 @@ function WorkspaceApp() {
         onClose={() => setIsSidebarOpen(false)}
         onSelectFolder={selectFolder}
         onSelectItem={selectItem}
+        onOpenBoard={() => {
+          if (!confirmDiscardDraft()) return;
+          setIsBoardOpen(true);
+          setIsSidebarOpen(false);
+        }}
         onCreateFolder={handleCreateFolder}
         onNewFolderNameChange={setNewFolderName}
         onCancelFolderForm={() => {
@@ -1094,6 +1116,9 @@ function WorkspaceApp() {
       />
 
       <section className="workspace-main">
+        {isBoardOpen ? (
+          <Whiteboard onClose={() => setIsBoardOpen(false)} theme={theme} />
+        ) : (
         <div
           className={`workspace-content${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
         >
@@ -1187,6 +1212,7 @@ function WorkspaceApp() {
                     draftContent={draftContent}
                     draftFolderId={draftFolderId}
                     draftTopics={draftTopics}
+                    boardStrokes={draftBoardStrokes}
                     draggedTopicId={draggedTopicId}
                     topicDropTarget={topicDropTarget}
                     isDraftDirty={isDraftDirty}
@@ -1197,6 +1223,7 @@ function WorkspaceApp() {
                     onTitleChange={setDraftTitle}
                     onFolderChange={setDraftFolderId}
                     onContentChange={setDraftContent}
+                    onBoardStrokesChange={setDraftBoardStrokes}
                     onAddTopic={addPreparationTopic}
                     onUpdateTopic={updatePreparationTopic}
                     onRemoveTopic={removePreparationTopic}
@@ -1272,6 +1299,7 @@ function WorkspaceApp() {
             </div>
           )}
         </div>
+        )}
       </section>
 
       <AssistantPanel

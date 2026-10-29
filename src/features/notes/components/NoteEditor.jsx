@@ -11,6 +11,7 @@ function NoteEditor({
   draftContent,
   draftFolderId,
   draftTopics,
+  boardStrokes,
   draggedTopicId,
   topicDropTarget,
   isDraftDirty,
@@ -21,6 +22,7 @@ function NoteEditor({
   onTitleChange,
   onFolderChange,
   onContentChange,
+  onBoardStrokesChange,
   onAddTopic,
   onUpdateTopic,
   onRemoveTopic,
@@ -33,7 +35,10 @@ function NoteEditor({
   onTopicDragLeave,
 }) {
   return (
-    <form className="note-editor" onSubmit={onSave}>
+    <form
+      className={`note-editor${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+      onSubmit={onSave}
+    >
       <div className="editor-topline">
         <span className="editor-type">
           <FontAwesomeIcon icon={faFileLines} />
@@ -63,42 +68,50 @@ function NoteEditor({
         </div>
       </div>
 
-      <label className="editor-label" htmlFor="note-title">
-        Note title
-      </label>
-      <input
-        id="note-title"
-        className="note-title-input"
-        value={draftTitle}
-        onChange={(event) => onTitleChange(event.target.value)}
-        placeholder="Give your note a title"
-        maxLength={100}
-        required
-      />
-
-      <label className="editor-label" htmlFor="note-folder">
-        Save in
-      </label>
-      <select
-        id="note-folder"
-        className="note-folder-select"
-        value={draftFolderId}
-        onChange={(event) => onFolderChange(event.target.value)}
-        required
-      >
-        {folders.map((folder) => (
-          <option value={folder.id} key={folder.id}>
-            {getFolderPath(folder.id, folders)}
-          </option>
-        ))}
-      </select>
+      <div className="preparation-note-meta">
+        <div className="preparation-note-meta-field">
+          <label className="editor-label" htmlFor="note-title">
+            Board title
+          </label>
+          <input
+            id="note-title"
+            className="note-title-input"
+            value={draftTitle}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="Give your note a title"
+            maxLength={100}
+            required
+          />
+        </div>
+        <div className="preparation-note-meta-field">
+          <label className="editor-label" htmlFor="note-folder">
+            Save in
+          </label>
+          <select
+            id="note-folder"
+            className="note-folder-select"
+            value={draftFolderId}
+            onChange={(event) => onFolderChange(event.target.value)}
+            required
+          >
+            {folders.map((folder) => (
+              <option value={folder.id} key={folder.id}>
+                {getFolderPath(folder.id, folders)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <PreparationTracker
+        boardTitle={draftTitle}
         draftTopics={draftTopics}
+        boardStrokes={boardStrokes}
         draggedTopicId={draggedTopicId}
         topicDropTarget={topicDropTarget}
         onAddTopic={onAddTopic}
         onUpdateTopic={onUpdateTopic}
+        onBoardStrokesChange={onBoardStrokesChange}
         onRemoveTopic={onRemoveTopic}
         onTogglePinned={onTogglePinned}
         onMoveTopic={onMoveTopic}
@@ -109,16 +122,31 @@ function NoteEditor({
         onTopicDragLeave={onTopicDragLeave}
       />
 
-      <label className="editor-label" htmlFor="note-content">
-        Overall interview notes
-      </label>
-      <textarea
-        id="note-content"
-        className="note-content-input"
-        value={draftContent}
-        onChange={(event) => onContentChange(event.target.value)}
-        placeholder="Capture your ideas, preparation plan, or key takeaways…"
-      />
+      {isPreparationTrackerFocused ? (
+        <details className="preparation-session-notes">
+          <summary>Session notes <span>Optional context for this board</span></summary>
+          <textarea
+            id="note-content"
+            className="note-content-input"
+            value={draftContent}
+            onChange={(event) => onContentChange(event.target.value)}
+            placeholder="Capture your ideas, preparation plan, or key takeaways…"
+          />
+        </details>
+      ) : (
+        <>
+          <label className="editor-label" htmlFor="note-content">
+            Overall interview notes
+          </label>
+          <textarea
+            id="note-content"
+            className="note-content-input"
+            value={draftContent}
+            onChange={(event) => onContentChange(event.target.value)}
+            placeholder="Capture your ideas, preparation plan, or key takeaways…"
+          />
+        </>
+      )}
 
       <div className="editor-footer">
         <span>{isDraftDirty ? "Unsaved changes" : "Saved on this device"}</span>

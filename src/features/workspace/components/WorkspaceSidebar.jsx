@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
+  faChalkboard,
   faFileLines,
   faFolder,
   faFolderPlus,
@@ -195,6 +196,7 @@ function WorkspaceSidebar({
   items,
   folderCounts,
   selectedFolderId,
+  isBoardOpen,
   selectedItemId,
   isAddingFolder,
   newFolderParentId,
@@ -204,6 +206,7 @@ function WorkspaceSidebar({
   isRootDropTarget,
   onClose,
   onSelectFolder,
+  onOpenBoard,
   onSelectItem,
   onCreateFolder,
   onNewFolderNameChange,
@@ -247,12 +250,22 @@ function WorkspaceSidebar({
 
       <button
         type="button"
-        className={`sidebar-link ${selectedFolderId === "all" ? "active" : ""}`}
+        className={`sidebar-link ${selectedFolderId === "all" && !isBoardOpen ? "active" : ""}`}
         onClick={() => onSelectFolder("all")}
       >
         <FontAwesomeIcon icon={faFileLines} />
         <span>All documents</span>
         <span className="sidebar-count">{items.length}</span>
+      </button>
+      <button
+        type="button"
+        className={`sidebar-link ${isBoardOpen ? "active" : ""}`}
+        onClick={onOpenBoard}
+        aria-current={isBoardOpen ? "page" : undefined}
+      >
+        <FontAwesomeIcon icon={faChalkboard} />
+        <span>Whiteboard</span>
+        <span className="sidebar-count">New</span>
       </button>
 
       <div
