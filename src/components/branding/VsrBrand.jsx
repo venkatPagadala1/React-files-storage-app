@@ -1,4 +1,8 @@
+import { useId } from "react";
+
 export function VsrLogoMark() {
+  const gradientId = useId();
+
   return (
     <svg
       className="vsr-logo-glyph"
@@ -6,34 +10,21 @@ export function VsrLogoMark() {
       fill="none"
       aria-hidden="true"
     >
-      <path
-        d="M42 8.5a22 22 0 1 0 0 39"
-        className="vsr-logo-crescent"
-        stroke="currentColor"
-        strokeWidth="5.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M38.5 14.5a16.5 16.5 0 1 0 0 27"
-        className="vsr-logo-inner-arc"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="m14 19 8.5 20L31 19"
-        className="vsr-logo-v"
-        strokeWidth="4.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m22.5 39 10.2-10.2h5.1"
-        className="vsr-logo-rise"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <defs>
+        <linearGradient id={`${gradientId}-front`} x1="13" y1="9" x2="43" y2="47" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFF4FB" />
+          <stop offset=".48" stopColor="#F4B1D0" />
+          <stop offset="1" stopColor="#AD75EA" />
+        </linearGradient>
+        <linearGradient id={`${gradientId}-side`} x1="18" y1="13" x2="47" y2="48" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#A54C9E" />
+          <stop offset="1" stopColor="#493483" />
+        </linearGradient>
+      </defs>
+      <path d="m15 15 9 23 9-23h5l-12 30h-5L9 15h6Z" fill={`url(#${gradientId}-side)`} transform="translate(2 2)" />
+      <path d="M32 15h8a9 9 0 0 1 3.8 17.2L50 45h-6l-5.3-11H37v11h-5V15Zm5 5v9h3a4.5 4.5 0 0 0 0-9h-3Z" fill={`url(#${gradientId}-side)`} transform="translate(2 2)" />
+      <path d="m13 13 9 23 9-23h5L24 43h-5L7 13h6Z" fill={`url(#${gradientId}-front)`} />
+      <path d="M30 13h8a9 9 0 0 1 3.8 17.2L48 43h-6l-5.3-11H35v11h-5V13Zm5 5v9h3a4.5 4.5 0 0 0 0-9h-3Z" fill={`url(#${gradientId}-front)`} />
     </svg>
   );
 }

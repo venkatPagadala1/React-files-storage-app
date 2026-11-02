@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
   faBars,
+  faCircleUser,
   faMagnifyingGlass,
   faMoon,
   faPlus,
@@ -12,6 +13,8 @@ import {
 import { palettes } from "../../../lib/workspaceConfig.js";
 
 function WorkspaceHeader({
+  activeArea,
+  profile,
   theme,
   palette,
   searchQuery,
@@ -20,6 +23,7 @@ function WorkspaceHeader({
   visibleItemCount,
   isLoading,
   canUpload,
+  canShare,
   fileInputRef,
   replaceFileInputRef,
   onSearchChange,
@@ -28,10 +32,29 @@ function WorkspaceHeader({
   onThemeChange,
   onPaletteChange,
   onOpenSignout,
+  onOpenProfile,
   onUpload,
   onReplaceFile,
   onNewNote,
 }) {
+  const isEmployeeArea = activeArea === "employee";
+  const pageTitle =
+    activeArea === "company"
+      ? "Company overview"
+      : activeArea === "company-resources"
+        ? "Company resources"
+        : activeArea === "team-admin"
+          ? "Manage team & roles"
+            : activeArea === "calendar"
+              ? "Preparation calendar"
+              : activeArea === "profile"
+                ? "My profile"
+        : activeArea === "training"
+        ? "Training & learning"
+        : folderName ?? "All documents";
+  const searchLabel =
+    isEmployeeArea ? "Search notes and files" : "Search notes and files in employee workspace";
+
   return (
     <>
       <header className="workspace-topbar">
@@ -50,19 +73,19 @@ function WorkspaceHeader({
             type="search"
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search notes and files"
-            aria-label="Search notes and files"
+            placeholder={searchLabel}
+            aria-label={searchLabel}
           />
           <kbd>Ctrl / ⌘ K</kbd>
         </label>
-        <button
+        {canShare && <button
           type="button"
           className="share-button"
           onClick={onOpenSharing}
         >
           <FontAwesomeIcon icon={faShareNodes} />
           <span>Sharing</span>
-        </button>
+        </button>}
         <button
           type="button"
           className="topbar-tool-button"
@@ -89,6 +112,20 @@ function WorkspaceHeader({
         </label>
         <button
           type="button"
+          className="topbar-tool-button profile-shortcut"
+          onClick={onOpenProfile}
+          aria-label="Open my profile"
+          title="Open my profile"
+        >
+          {profile?.avatar ? (
+            <img className="profile-shortcut-avatar" src={profile.avatar} alt="" />
+          ) : (
+            <FontAwesomeIcon icon={faCircleUser} />
+          )}
+          <span>Profile</span>
+        </button>
+        <button
+          type="button"
           className="topbar-tool-button signout-button"
           onClick={onOpenSignout}
           aria-label="Sign out"
@@ -101,15 +138,27 @@ function WorkspaceHeader({
 
       <div className="workspace-heading">
         <div>
-          <span className="workspace-overline">LOCAL WORKSPACE · NOT SECURE STORAGE</span>
-          <h1>{searchQuery ? "Search results" : folderName ?? "All documents"}</h1>
+          <span className="workspace-overline">VSR GROUP OF COMPANIES · PROTOTYPE</span>
+          <h1>{isEmployeeArea && searchQuery ? "Search results" : pageTitle}</h1>
           <p>
-            {searchQuery
+            {isEmployeeArea && searchQuery
               ? `${visibleItemCount} matching item${visibleItemCount === 1 ? "" : "s"}`
-              : "Keep your preparation organized and moving forward."}
+              : activeArea === "company"
+                ? "Company information and shared work, together."
+                : activeArea === "company-resources"
+                  ? "Policies, guides, and onboarding resources."
+                  : activeArea === "team-admin"
+                    ? "Admin-only controls shown with sample data."
+                    : activeArea === "calendar"
+                      ? "Plan study sessions, training, and preparation milestones."
+                      : activeArea === "profile"
+                        ? "Manage the demo identity shown on your learning comments."
+                : activeArea === "training"
+                  ? "Prepare, learn, and capture your next steps."
+                  : "Keep your documents and preparation organized."}
           </p>
         </div>
-        <div className="workspace-actions">
+        {isEmployeeArea && <div className="workspace-actions">
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -140,7 +189,7 @@ function WorkspaceHeader({
             <FontAwesomeIcon icon={faPlus} />
             <span>New note</span>
           </button>
-        </div>
+        </div>}
       </div>
     </>
   );

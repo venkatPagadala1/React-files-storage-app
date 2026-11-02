@@ -27,8 +27,12 @@ import NoteEditor from "../notes/components/NoteEditor.jsx";
 import AssistantPanel from "../assistant/components/AssistantPanel.jsx";
 import useAssistant from "../assistant/hooks/useAssistant.js";
 import WorkspaceSidebar from "./components/WorkspaceSidebar.jsx";
+import WorkspaceBottomNav from "./components/WorkspaceBottomNav.jsx";
 import WorkspaceHeader from "./components/WorkspaceHeader.jsx";
 import WelcomePage from "./components/WelcomePage.jsx";
+import CompanyHub from "./components/CompanyHub.jsx";
+import PreparationCalendar from "./components/PreparationCalendar.jsx";
+import UserProfile from "./components/UserProfile.jsx";
 import DocumentList from "./components/DocumentList.jsx";
 import FileDetails from "../files/components/FileDetails.jsx";
 import Whiteboard from "../whiteboard/Whiteboard.jsx";
@@ -42,6 +46,71 @@ import {
   saveItem,
 } from "../../lib/workspaceStorage.js";
 
+const roleFeatures = {
+  Admin: [
+    "company",
+    "company-resources",
+    "employee",
+    "training",
+    "calendar",
+    "profile",
+    "whiteboard",
+    "upload",
+    "manage-team",
+    "team-admin",
+    "assistant",
+  ],
+  Manager: [
+    "company",
+    "company-resources",
+    "employee",
+    "training",
+    "calendar",
+    "profile",
+    "whiteboard",
+    "upload",
+    "assistant",
+  ],
+  Employee: [
+    "company-resources",
+    "employee",
+    "training",
+    "calendar",
+    "profile",
+    "whiteboard",
+    "upload",
+    "assistant",
+  ],
+};
+
+const PROFILE_STORAGE_KEY = "vsr-demo-profile-v1";
+
+function getSavedProfile() {
+  const defaultProfile = {
+    name: "Demo Member",
+    email: "demo@example.com",
+    title: "VSR workspace member",
+    bio: "",
+  };
+  try {
+    const savedProfile = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!savedProfile) return defaultProfile;
+    const parsedProfile = JSON.parse(savedProfile);
+    if (
+      typeof parsedProfile.name !== "string" ||
+      typeof parsedProfile.email !== "string" ||
+      typeof parsedProfile.title !== "string" ||
+      typeof parsedProfile.bio !== "string"
+    ) {
+      throw new Error("Saved profile data has an invalid format.");
+    }
+    return parsedProfile;
+  } catch (error) {
+    console.error("Could not load the demo profile.", error);
+    return defaultProfile;
+  }
+}
+
 function WorkspaceApp() {
   const [folders, setFolders] = useState([]);
   const [items, setItems] = useState([]);
@@ -49,6 +118,7 @@ function WorkspaceApp() {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
+  const [draftPurpose, setDraftPurpose] = useState("general");
   const [draftTopics, setDraftTopics] = useState([]);
   const [draftBoardStrokes, setDraftBoardStrokes] = useState([]);
   const [isDocumentListHidden, setIsDocumentListHidden] = useState(false);
@@ -72,12 +142,9 @@ function WorkspaceApp() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isBoardOpen, setIsBoardOpen] = useState(false);
-  const [signupFirstName, setSignupFirstName] = useState("");
-  const [signupLastName, setSignupLastName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupPasswordConfirmation, setSignupPasswordConfirmation] = useState("");
-  const [signupMessage, setSignupMessage] = useState("");
+  const [activeArea, setActiveArea] = useState("company");
+  const [previewRole, setPreviewRole] = useState("Admin");
+  const [profile, setProfile] = useState(getSavedProfile);
   const [theme, setTheme] = useState(getSavedTheme);
   const [palette, setPalette] = useState(getSavedPalette);
   const [isEditingFile, setIsEditingFile] = useState(false);
@@ -270,6 +337,7 @@ function WorkspaceApp() {
 
   function selectFolder(folderId) {
     if (!confirmDiscardDraft()) return;
+    setActiveArea("employee");
     setIsBoardOpen(false);
     clearFileDocument();
     setIsFileViewerOpen(false);
@@ -285,6 +353,7 @@ function WorkspaceApp() {
     setIsCreatingNote(false);
     setDraftTitle("");
     setDraftContent("");
+    setDraftPurpose("general");
     setDraftTopics([]);
     setDraftBoardStrokes([]);
     setIsSidebarOpen(false);
@@ -292,6 +361,7 @@ function WorkspaceApp() {
 
   function selectItem(item) {
     if (!confirmDiscardDraft()) return;
+    setActiveArea("employee");
     setIsBoardOpen(false);
     clearFileDocument();
     setIsFileViewerOpen(false);
@@ -306,6 +376,7 @@ function WorkspaceApp() {
     setIsCreatingNote(false);
     setDraftTitle(item.title);
     setDraftContent(item.content ?? "");
+    setDraftPurpose(item.purpose === "training" ? "training" : "general");
     setDraftTopics(
       item.kind === "note"
         ? (item.topics ?? []).map((topic, index) => ({
@@ -495,8 +566,9 @@ function WorkspaceApp() {
     }
   }
 
-  function startNewNote() {
+  function startNewNote({ title = "", purpose = "general" } = {}) {
     if (!confirmDiscardDraft()) return;
+    setActiveArea("employee");
     clearFileDocument();
     setIsFileViewerOpen(false);
     setPreviewSearch("");
@@ -510,8 +582,9 @@ function WorkspaceApp() {
     setFileDraftContent("");
     setSavedFileContent("");
     setIsCreatingNote(true);
-    setDraftTitle("");
+    setDraftTitle(title);
     setDraftContent("");
+    setDraftPurpose(purpose);
     setDraftTopics([]);
     setDraftBoardStrokes([]);
     setDraftFolderId(destinationFolderId ?? "");
@@ -668,6 +741,7 @@ function WorkspaceApp() {
     const note = {
       id: isCreatingNote ? createId() : activeItem.id,
       kind: "note",
+      purpose: draftPurpose,
       folderId: draftFolderId,
       title,
       content: draftContent,
@@ -1009,23 +1083,55 @@ function WorkspaceApp() {
     [folders, items],
   );
 
-  function handleSignupSubmit(event) {
-    event.preventDefault();
-    if (signupPassword !== signupPasswordConfirmation) {
-      setSignupMessage("Passwords do not match.");
-      return;
-    }
-
-    setSignupMessage(
-      "No account was created: sign-up is not connected to Supabase yet. You can still open the local workspace.",
-    );
+  function navigateToArea(area) {
+    if (!roleFeatures[previewRole].includes(area)) return;
+    setActiveArea(area);
+    setIsBoardOpen(false);
+    setIsSidebarOpen(false);
   }
 
-  function openLocalWorkspace() {
-    setSignupPassword("");
-    setSignupPasswordConfirmation("");
-    setSignupMessage("");
+  function handlePreviewRoleChange(nextRole) {
+    if (!roleFeatures[nextRole]) return;
+    if (!confirmDiscardDraft()) return;
+
+    setPreviewRole(nextRole);
+    if (!roleFeatures[nextRole].includes(activeArea)) {
+      setActiveArea(nextRole === "Employee" ? "company-resources" : "company");
+      setIsBoardOpen(false);
+    }
+  }
+
+  function openLocalWorkspace(authDetails = {}) {
+    const suppliedEmail = typeof authDetails.email === "string" ? authDetails.email.trim() : "";
+    const suppliedName = typeof authDetails.name === "string" ? authDetails.name.trim() : "";
+    if (suppliedEmail) {
+      const emailName = suppliedEmail.split("@")[0].replace(/[._-]+/g, " ");
+      const inferredName = emailName.replace(/\b\w/g, (letter) => letter.toUpperCase());
+      const nextProfile = {
+        ...profile,
+        name: suppliedName || inferredName || "Demo Member",
+        email: suppliedEmail,
+      };
+      setProfile(nextProfile);
+      try {
+        window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
+      } catch (error) {
+        console.error("Could not save the demo profile.", error);
+      }
+    }
     setIsWorkspaceOpen(true);
+  }
+
+  function saveProfile(nextProfile) {
+    try {
+      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
+      setProfile(nextProfile);
+      return true;
+    } catch (error) {
+      console.error("Could not save the demo profile.", error);
+      setStatusMessage("Could not save profile details to this browser.");
+      return false;
+    }
   }
 
   if (!isWorkspaceOpen) {
@@ -1033,29 +1139,26 @@ function WorkspaceApp() {
       <WelcomePage
         theme={theme}
         palette={palette}
-        signupFirstName={signupFirstName}
-        signupLastName={signupLastName}
-        signupEmail={signupEmail}
-        signupPassword={signupPassword}
-        signupPasswordConfirmation={signupPasswordConfirmation}
-        signupMessage={signupMessage}
         onThemeChange={setTheme}
         onPaletteChange={setPalette}
-        onFirstNameChange={setSignupFirstName}
-        onLastNameChange={setSignupLastName}
-        onEmailChange={setSignupEmail}
-        onPasswordChange={setSignupPassword}
-        onPasswordConfirmationChange={setSignupPasswordConfirmation}
-        onSubmit={handleSignupSubmit}
         onOpenWorkspace={openLocalWorkspace}
       />
     );
   }
 
   return (
-    <main className="workspace-shell" data-theme={theme} data-palette={palette}>
+    <main
+      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}`}
+      data-theme={theme}
+      data-palette={palette}
+    >
       <WorkspaceSidebar
         isOpen={isSidebarOpen}
+        activeArea={activeArea}
+        previewRole={previewRole}
+        roleFeatures={roleFeatures[previewRole]}
+        onPreviewRoleChange={handlePreviewRoleChange}
+        onNavigateArea={navigateToArea}
         folders={folders}
         items={items}
         folderCounts={folderCounts}
@@ -1123,14 +1226,21 @@ function WorkspaceApp() {
           className={`workspace-content${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
         >
         <WorkspaceHeader
+          activeArea={activeArea}
+          profile={profile}
           theme={theme}
           palette={palette}
           searchQuery={searchQuery}
           searchInputRef={searchInputRef}
-          folderName={activeFolder?.name}
+          folderName={activeArea === "employee" ? activeFolder?.name : undefined}
           visibleItemCount={visibleItems.length}
           isLoading={isLoading}
-          canUpload={folders.length > 0}
+          canUpload={
+            roleFeatures[previewRole].includes("upload") &&
+            activeArea === "employee" &&
+            folders.length > 0
+          }
+          canShare={roleFeatures[previewRole].includes("share")}
           fileInputRef={fileInputRef}
           replaceFileInputRef={replaceFileInputRef}
           onSearchChange={setSearchQuery}
@@ -1139,40 +1249,41 @@ function WorkspaceApp() {
           onThemeChange={setTheme}
           onPaletteChange={setPalette}
           onOpenSignout={() => setIsSignoutInfoOpen(true)}
+          onOpenProfile={() => navigateToArea("profile")}
           onUpload={handleUpload}
           onReplaceFile={handleReplaceFile}
           onNewNote={startNewNote}
         />
 
-          <div className="workspace-security-notice" role="note">
-            <strong>Do not store sensitive information here yet.</strong>
-            <span>
-              This prototype has no sign-in, encryption, or secure sharing.
-              Notes and files are saved unencrypted in this browser profile.
-              Supabase protection is not configured.
-            </span>
-          </div>
-
-          {storageError && (
-            <div className="workspace-alert" role="alert">
-              {storageError}
-            </div>
-          )}
-          {statusMessage && (
-            <div className="workspace-status" role="status" aria-live="polite">
-              <span>{statusMessage}</span>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Dismiss message"
-                onClick={() => setStatusMessage("")}
-              >
-                <FontAwesomeIcon icon={faXmark} />
-              </button>
-            </div>
-          )}
-
-          {isLoading ? (
+          {activeArea === "employee" ? (
+            <>
+              <div className="workspace-security-notice" role="note">
+                <strong>Do not store sensitive information here yet.</strong>
+                <span>
+                  This prototype has no authentication, encryption, or secure sharing.
+                  Notes and files are saved unencrypted in this browser profile;
+                  no backend access controls are connected.
+                </span>
+              </div>
+              {storageError && (
+                <div className="workspace-alert" role="alert">
+                  {storageError}
+                </div>
+              )}
+              {statusMessage && (
+                <div className="workspace-status" role="status" aria-live="polite">
+                  <span>{statusMessage}</span>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="Dismiss message"
+                    onClick={() => setStatusMessage("")}
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                  </button>
+                </div>
+              )}
+              {isLoading ? (
             <div className="workspace-empty-state">Loading your workspace…</div>
           ) : storageError ? (
             <div className="workspace-empty-state">
@@ -1207,6 +1318,7 @@ function WorkspaceApp() {
                   <NoteEditor
                     activeItem={activeItem}
                     isCreatingNote={isCreatingNote}
+                    isTrainingPreparation={draftPurpose === "training"}
                     isPreparationTrackerFocused={isPreparationTrackerFocused}
                     draftTitle={draftTitle}
                     draftContent={draftContent}
@@ -1298,9 +1410,45 @@ function WorkspaceApp() {
               </section>
             </div>
           )}
+            </>
+          ) : activeArea === "calendar" ? (
+            <PreparationCalendar profile={profile} />
+          ) : activeArea === "profile" ? (
+            <UserProfile profile={profile} onSave={saveProfile} />
+          ) : (
+            <CompanyHub
+              view={activeArea}
+              role={previewRole}
+              itemCount={items.length}
+              onOpenTraining={() => navigateToArea("training")}
+              onStartTraining={() =>
+                startNewNote({ title: "Training preparation", purpose: "training" })
+              }
+              onOpenBoard={() => {
+                if (!confirmDiscardDraft()) return;
+                if (!roleFeatures[previewRole].includes("whiteboard")) return;
+                setIsBoardOpen(true);
+              }}
+            />
+          )}
         </div>
         )}
       </section>
+
+      {!isBoardOpen && (
+        <WorkspaceBottomNav
+          activeArea={activeArea}
+          isBoardOpen={isBoardOpen}
+          roleFeatures={roleFeatures[previewRole]}
+          onNavigate={navigateToArea}
+          onOpenBoard={() => {
+            if (!confirmDiscardDraft()) return;
+            if (!roleFeatures[previewRole].includes("whiteboard")) return;
+            setIsBoardOpen(true);
+            setIsSidebarOpen(false);
+          }}
+        />
+      )}
 
       <AssistantPanel
         isOpen={isAssistantOpen}
@@ -1351,8 +1499,8 @@ function WorkspaceApp() {
             <p>
               Notes and files are stored unencrypted in this browser on this
               device. Do not store sensitive information here. Private sharing
-              with invited, signed-in collaborators requires Supabase
-              authentication, access rules, and private file storage; none are
+              with invited, signed-in collaborators requires authentication,
+              server-enforced access rules, and private file storage; none are
               configured yet.
             </p>
             <button
@@ -1388,11 +1536,11 @@ function WorkspaceApp() {
             <div className="share-modal-icon">
               <FontAwesomeIcon icon={faRightFromBracket} />
             </div>
-            <h2 id="signout-modal-title">Exit this local workspace?</h2>
+            <h2 id="signout-modal-title">End this demo session?</h2>
             <p>
-              No signed-in account is active in this prototype. Returning to
-              the welcome page will not delete your locally stored documents.
-              Authentication and account-based sign-out are not configured.
+              This mock sign-in did not create an account or protect local
+              files. Returning to the sign-in page will not delete documents
+              stored in this browser.
             </p>
             <button
               type="button"
@@ -1402,7 +1550,7 @@ function WorkspaceApp() {
                 setIsWorkspaceOpen(false);
               }}
             >
-              Return to welcome page
+              Return to sign-in
             </button>
           </section>
         </div>

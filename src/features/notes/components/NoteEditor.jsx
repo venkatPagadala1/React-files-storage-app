@@ -6,6 +6,7 @@ import PreparationTracker from "./PreparationTracker.jsx";
 function NoteEditor({
   activeItem,
   isCreatingNote,
+  isTrainingPreparation,
   isPreparationTrackerFocused,
   draftTitle,
   draftContent,
@@ -105,6 +106,7 @@ function NoteEditor({
 
       <PreparationTracker
         boardTitle={draftTitle}
+        isTrainingPreparation={isTrainingPreparation}
         draftTopics={draftTopics}
         boardStrokes={boardStrokes}
         draggedTopicId={draggedTopicId}

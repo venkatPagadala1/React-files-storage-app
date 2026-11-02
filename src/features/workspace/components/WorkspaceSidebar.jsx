@@ -1,10 +1,15 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
+  faBookOpen,
+  faBuilding,
+  faCalendarDays,
   faChalkboard,
+  faCircleUser,
   faFileLines,
   faFolder,
   faFolderPlus,
+  faUserShield,
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -196,6 +201,9 @@ function WorkspaceSidebar({
   items,
   folderCounts,
   selectedFolderId,
+  activeArea,
+  previewRole,
+  roleFeatures,
   isBoardOpen,
   selectedItemId,
   isAddingFolder,
@@ -206,6 +214,8 @@ function WorkspaceSidebar({
   isRootDropTarget,
   onClose,
   onSelectFolder,
+  onNavigateArea,
+  onPreviewRoleChange,
   onOpenBoard,
   onSelectItem,
   onCreateFolder,
@@ -224,6 +234,7 @@ function WorkspaceSidebar({
   onDragEnd,
 }) {
   const isRootFolderFormOpen = isAddingFolder && newFolderParentId === null;
+  const canView = (feature) => roleFeatures.includes(feature);
 
   return (
     <aside className={`workspace-sidebar ${isOpen ? "is-open" : ""}`}>
@@ -234,9 +245,9 @@ function WorkspaceSidebar({
         <div>
           <strong className="workspace-brand-name">
             <VsrWordmark className="workspace-brand-wordmark" />
-            <span>Workspace</span>
+            <span>GROUP</span>
           </strong>
-          <span>Personal knowledge hub</span>
+          <span>VSR Group of Companies</span>
         </div>
         <button
           type="button"
@@ -248,89 +259,177 @@ function WorkspaceSidebar({
         </button>
       </div>
 
-      <button
-        type="button"
-        className={`sidebar-link ${selectedFolderId === "all" && !isBoardOpen ? "active" : ""}`}
-        onClick={() => onSelectFolder("all")}
-      >
-        <FontAwesomeIcon icon={faFileLines} />
-        <span>All documents</span>
-        <span className="sidebar-count">{items.length}</span>
-      </button>
-      <button
-        type="button"
-        className={`sidebar-link ${isBoardOpen ? "active" : ""}`}
-        onClick={onOpenBoard}
-        aria-current={isBoardOpen ? "page" : undefined}
-      >
-        <FontAwesomeIcon icon={faChalkboard} />
-        <span>Whiteboard</span>
-        <span className="sidebar-count">New</span>
-      </button>
-
-      <div
-        className={`sidebar-section-heading ${isRootDropTarget ? "is-drop-target" : ""}`}
-        onDragOver={onRootDragOver}
-        onDragLeave={onRootDragLeave}
-        onDrop={onDropRoot}
-        title="Drop a subfolder here to move it to the top level"
-      >
-        <span>YOUR FOLDERS</span>
-        <button
-          type="button"
-          className="icon-button folder-add-button"
-          aria-label="Create folder"
-          title="Create folder"
-          onClick={onToggleRootFolderForm}
+      <label className="role-preview-control">
+        <span>Preview role <small>visual only</small></span>
+        <select
+          value={previewRole}
+          onChange={(event) => onPreviewRoleChange(event.target.value)}
+          aria-label="Preview workspace role"
         >
-          <FontAwesomeIcon icon={faFolderPlus} />
-        </button>
-      </div>
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Employee">Employee</option>
+        </select>
+      </label>
 
-      {isRootFolderFormOpen && (
-        <NewFolderForm
-          isSubfolder={false}
-          name={newFolderName}
-          onNameChange={onNewFolderNameChange}
-          onSubmit={onCreateFolder}
-          onCancel={onCancelFolderForm}
-        />
-      )}
+      <nav className="workspace-area-navigation" aria-label="Workspace areas">
+        {(canView("company") || canView("company-resources")) && (
+          <section className="workspace-nav-group" aria-label="Company">
+            <h2 className="workspace-nav-group-title">Company</h2>
+            {canView("company") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "company" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("company")}
+              aria-current={activeArea === "company" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faBuilding} />
+              <span>Overview</span>
+            </button>}
+            {canView("company-resources") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "company-resources" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("company-resources")}
+              aria-current={activeArea === "company-resources" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faFolder} />
+              <span>Resources</span>
+            </button>}
+          </section>
+        )}
 
-      <nav className="folder-navigation" aria-label="Document folders">
-        <FolderTree
-          folders={folders}
-          items={items}
-          folderCounts={folderCounts}
-          selectedFolderId={selectedFolderId}
-          selectedItemId={selectedItemId}
-          isAddingFolder={isAddingFolder}
-          newFolderParentId={newFolderParentId}
-          newFolderName={newFolderName}
-          dropTargetFolderId={dropTargetFolderId}
-          dropPosition={dropPosition}
-          onSelectFolder={onSelectFolder}
-          onSelectItem={onSelectItem}
-          onCreateFolder={onCreateFolder}
-          onNewFolderNameChange={onNewFolderNameChange}
-          onCancelFolderForm={onCancelFolderForm}
-          onStartSubfolder={onStartSubfolder}
-          onDeleteFolder={onDeleteFolder}
-          onFolderDragOver={onFolderDragOver}
-          onFolderDragLeave={onFolderDragLeave}
-          onDropFolder={onDropFolder}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-        />
+        {canView("employee") && (
+          <section className="workspace-nav-group" aria-label="My workspace">
+            <h2 className="workspace-nav-group-title">My workspace</h2>
+            <button
+              type="button"
+              className={`sidebar-link ${activeArea === "employee" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onSelectFolder("all")}
+              aria-current={activeArea === "employee" && !isBoardOpen ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faFileLines} />
+              <span>Documents</span>
+              <span className="sidebar-count">{items.length}</span>
+            </button>
+            {canView("profile") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "profile" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("profile")}
+              aria-current={activeArea === "profile" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faCircleUser} />
+              <span>My profile</span>
+            </button>}
+          </section>
+        )}
+
+        {(canView("training") || canView("calendar") || canView("whiteboard")) && (
+          <section className="workspace-nav-group" aria-label="Learning and development">
+            <h2 className="workspace-nav-group-title">Learning & development</h2>
+            {canView("training") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "training" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("training")}
+              aria-current={activeArea === "training" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faBookOpen} />
+              <span>Learning paths</span>
+            </button>}
+            {canView("calendar") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "calendar" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("calendar")}
+              aria-current={activeArea === "calendar" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faCalendarDays} />
+              <span>Calendar</span>
+            </button>}
+            {canView("whiteboard") && <button
+              type="button"
+              className={`sidebar-link ${isBoardOpen ? "active" : ""}`}
+              onClick={onOpenBoard}
+              aria-current={isBoardOpen ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faChalkboard} />
+              <span>Whiteboard</span>
+            </button>}
+          </section>
+        )}
+
+        {canView("manage-team") && (
+          <section className="workspace-nav-group" aria-label="Administration">
+            <h2 className="workspace-nav-group-title">Administration</h2>
+            <button
+              type="button"
+              className={`sidebar-link ${activeArea === "team-admin" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("team-admin")}
+              aria-current={activeArea === "team-admin" ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faUserShield} />
+              <span>Team & roles</span>
+            </button>
+          </section>
+        )}
       </nav>
 
-      <div className="sidebar-storage-note">
-        <span className="storage-status-dot storage-status-warning" />
-        <div>
-          <strong>Stored on this device</strong>
-          <span>Local, unencrypted storage</span>
-        </div>
-      </div>
+      {canView("employee") && (
+        <>
+          <div
+            className={`sidebar-section-heading ${isRootDropTarget ? "is-drop-target" : ""}`}
+            hidden={activeArea !== "employee"}
+            onDragOver={onRootDragOver}
+            onDragLeave={onRootDragLeave}
+            onDrop={onDropRoot}
+            title="Drop a subfolder here to move it to the top level"
+          >
+            <span>YOUR FOLDERS</span>
+            <button
+            type="button"
+            className="icon-button folder-add-button"
+            aria-label="Create folder"
+            title="Create folder"
+            onClick={onToggleRootFolderForm}
+            >
+              <FontAwesomeIcon icon={faFolderPlus} />
+            </button>
+          </div>
+          {activeArea === "employee" && isRootFolderFormOpen && (
+            <NewFolderForm
+            isSubfolder={false}
+            name={newFolderName}
+            onNameChange={onNewFolderNameChange}
+            onSubmit={onCreateFolder}
+            onCancel={onCancelFolderForm}
+            />
+          )}
+          <nav className="folder-navigation" aria-label="Document folders" hidden={activeArea !== "employee"}>
+            <FolderTree
+              folders={folders}
+              items={items}
+              folderCounts={folderCounts}
+              selectedFolderId={selectedFolderId}
+              selectedItemId={selectedItemId}
+              isAddingFolder={isAddingFolder}
+              newFolderParentId={newFolderParentId}
+              newFolderName={newFolderName}
+              dropTargetFolderId={dropTargetFolderId}
+              dropPosition={dropPosition}
+              onSelectFolder={onSelectFolder}
+              onSelectItem={onSelectItem}
+              onCreateFolder={onCreateFolder}
+              onNewFolderNameChange={onNewFolderNameChange}
+              onCancelFolderForm={onCancelFolderForm}
+              onStartSubfolder={onStartSubfolder}
+              onDeleteFolder={onDeleteFolder}
+              onFolderDragOver={onFolderDragOver}
+              onFolderDragLeave={onFolderDragLeave}
+              onDropFolder={onDropFolder}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
+          </nav>
+        </>
+      )}
+
     </aside>
   );
 }

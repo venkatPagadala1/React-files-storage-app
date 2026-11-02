@@ -157,10 +157,10 @@
   .workspace-topbar {
     height: auto;
     display: grid;
-    grid-template-columns: 36px 36px 36px minmax(36px, 1fr) 36px;
+    grid-template-columns: 36px 36px minmax(36px, 1fr) 36px 36px 36px;
     grid-template-areas:
-      "menu search search search search"
-      "share theme palette palette signout";
+      "menu search search search search search"
+      "share theme palette palette profile signout";
     gap: 8px;
     padding: 10px 12px;
   }
@@ -182,8 +182,13 @@
     margin: 0;
   }
 
-  .workspace-topbar .topbar-tool-button:not(.signout-button) {
+  .workspace-topbar .topbar-tool-button:not(.signout-button):not(.profile-shortcut) {
     grid-area: theme;
+    width: 36px;
+  }
+
+  .workspace-topbar .profile-shortcut {
+    grid-area: profile;
     width: 36px;
   }
 
@@ -206,4 +211,3 @@
     opacity: 1;
   }
 }
-

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEye,
-  faEyeSlash,
+  faEnvelope,
   faMoon,
   faSun,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { VsrLogoMark, VsrWordmark } from "../../../components/branding/VsrBrand.jsx";
 import { palettes } from "../../../lib/workspaceConfig.js";
@@ -12,23 +12,21 @@ import { palettes } from "../../../lib/workspaceConfig.js";
 function WelcomePage({
   theme,
   palette,
-  signupFirstName,
-  signupLastName,
-  signupEmail,
-  signupPassword,
-  signupPasswordConfirmation,
-  signupMessage,
   onThemeChange,
   onPaletteChange,
-  onFirstNameChange,
-  onLastNameChange,
-  onEmailChange,
-  onPasswordChange,
-  onPasswordConfirmationChange,
-  onSubmit,
   onOpenWorkspace,
 }) {
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("signin");
+
+  function handleAuthSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    onOpenWorkspace({
+      name: authMode === "signup" ? String(formData.get("name") ?? "") : "",
+      email: String(formData.get("email") ?? ""),
+    });
+  }
 
   return (
     <main className="welcome-page" data-theme={theme} data-palette={palette}>
@@ -40,26 +38,26 @@ function WelcomePage({
             </span>
             <VsrWordmark className="welcome-brand-wordmark" />
           </span>
-          <span>GROUP OF COMPANIES</span>
+          <span>VSR GROUP OF COMPANIES</span>
         </div>
         <div className="welcome-story-copy">
-          <span className="welcome-kicker">Your next chapter starts here</span>
+          <span className="welcome-kicker">COMPANY & EMPLOYEE WORKSPACE PREVIEW</span>
           <h1 id="welcome-heading">
-            Make room
+            One team.
             <br />
-            for your
+            One place
             <br />
-            <span>next big idea.</span>
+            <span>to grow.</span>
           </h1>
           <p>
-            One thoughtful plan at a time. Gather your preparation notes,
-            project ideas, and important files in one focused workspace.
+            Bring company resources, employee documents, training preparation,
+            and team whiteboarding into one shared workspace experience.
           </p>
         </div>
         <span className="welcome-footer">A calmer place to think clearly.</span>
       </section>
 
-      <section className="welcome-form-panel" aria-labelledby="signup-heading">
+      <section className="welcome-form-panel" aria-labelledby="auth-heading">
         <button
           type="button"
           className="welcome-theme-toggle"
@@ -86,129 +84,133 @@ function WelcomePage({
         </label>
 
         <div className="welcome-form-card">
-          <span className="welcome-form-kicker">WELCOME TO VSR WORKSPACE</span>
-          <h2 id="signup-heading">Create your account</h2>
+          <span className="welcome-form-kicker">VSR GROUP OF COMPANIES</span>
+          <h2 id="auth-heading">
+            {authMode === "signin" ? "Welcome back" : "Create a demo account"}
+          </h2>
           <p className="welcome-form-intro">
-            Set up your details to preview the workspace experience.
+            {authMode === "signin"
+              ? "Sign in to explore the VSR workspace prototype."
+              : "Set up a temporary profile to explore the prototype."}
           </p>
 
-          <form className="welcome-form" onSubmit={onSubmit}>
-            <div className="welcome-name-fields">
+          <div className="welcome-demo-notice">
+            <strong>Demo access only · no real authentication</strong>
+            <span>
+              Any valid email and non-empty password are accepted. Nothing is
+              sent to a server, and credentials are not saved. Use mock details
+              only; never enter a real or reused password.
+            </span>
+          </div>
+          <div className="welcome-auth-tabs" role="tablist" aria-label="Account options">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMode === "signin"}
+              className={authMode === "signin" ? "active" : ""}
+              onClick={() => setAuthMode("signin")}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMode === "signup"}
+              className={authMode === "signup" ? "active" : ""}
+              onClick={() => setAuthMode("signup")}
+            >
+              Sign up
+            </button>
+          </div>
+          <form className="welcome-form" onSubmit={handleAuthSubmit}>
+            {authMode === "signup" && (
               <label className="welcome-field">
-                <span>First name</span>
+                Name
                 <input
                   type="text"
-                  value={signupFirstName}
-                  onChange={(event) => onFirstNameChange(event.target.value)}
-                  placeholder="First name"
-                  autoComplete="given-name"
+                  name="name"
+                  autoComplete="name"
+                  placeholder="Your name"
                   required
                 />
               </label>
-              <label className="welcome-field">
-                <span>Last name</span>
-                <input
-                  type="text"
-                  value={signupLastName}
-                  onChange={(event) => onLastNameChange(event.target.value)}
-                  placeholder="Last name"
-                  autoComplete="family-name"
-                  required
-                />
-              </label>
-            </div>
+            )}
             <label className="welcome-field">
-              <span>Email address</span>
+              Email
               <input
                 type="email"
-                value={signupEmail}
-                onChange={(event) => onEmailChange(event.target.value)}
-                placeholder="name@example.com"
+                name="email"
                 autoComplete="email"
+                placeholder="you@example.com"
                 required
               />
             </label>
             <label className="welcome-field">
-              <span>Password</span>
-              <span className="welcome-password-control">
-                <input
-                  type={passwordVisible ? "text" : "password"}
-                  value={signupPassword}
-                  onChange={(event) => onPasswordChange(event.target.value)}
-                  placeholder="Create a password"
-                  autoComplete="new-password"
-                  required
-                />
-                <button
-                  type="button"
-                  className="welcome-password-toggle"
-                  aria-label={passwordVisible ? "Hide password" : "Show password"}
-                  onClick={() => setPasswordVisible((visible) => !visible)}
-                >
-                  <FontAwesomeIcon
-                    icon={passwordVisible ? faEyeSlash : faEye}
-                    aria-hidden="true"
-                  />
-                </button>
-              </span>
+              Password
+              <input
+                type="password"
+                name="password"
+                autoComplete={authMode === "signin" ? "current-password" : "new-password"}
+                placeholder="Enter any demo password"
+                required
+              />
             </label>
-            <label className="welcome-field">
-              <span>Confirm password</span>
-              <span className="welcome-password-control">
-                <input
-                  type={passwordVisible ? "text" : "password"}
-                  value={signupPasswordConfirmation}
-                  onChange={(event) =>
-                    onPasswordConfirmationChange(event.target.value)
-                  }
-                  placeholder="Enter your password again"
-                  autoComplete="new-password"
-                  required
-                  aria-invalid={
-                    signupPasswordConfirmation.length > 0 &&
-                    signupPassword !== signupPasswordConfirmation
-                  }
-                />
-                <button
-                  type="button"
-                  className="welcome-password-toggle"
-                  aria-label={passwordVisible ? "Hide password" : "Show password"}
-                  onClick={() => setPasswordVisible((visible) => !visible)}
-                >
-                  <FontAwesomeIcon
-                    icon={passwordVisible ? faEyeSlash : faEye}
-                    aria-hidden="true"
-                  />
-                </button>
-              </span>
-            </label>
-            {signupMessage && (
-              <p className="welcome-form-message" role="status" aria-live="polite">
-                {signupMessage}
-              </p>
-            )}
             <button type="submit" className="welcome-create-button">
-              Create account
+              {authMode === "signin" ? "Sign in to prototype" : "Create demo account"}
             </button>
           </form>
-
-          <div className="welcome-demo-notice">
-            <strong>Prototype mode</strong>
-            <span>
-              Supabase authentication is not configured. This form does not
-              create an account or send your password anywhere. Shared public
-              access is not active in this local prototype.
-            </span>
-          </div>
           <button
             type="button"
-            className="welcome-open-workspace"
-            onClick={onOpenWorkspace}
+            className="welcome-contact-button"
+            onClick={() => setIsContactOpen(true)}
           >
-            Continue to local workspace
+            <FontAwesomeIcon icon={faEnvelope} />
+            Contact us
           </button>
         </div>
       </section>
+      {isContactOpen && (
+        <div
+          className="welcome-contact-backdrop"
+          onClick={() => setIsContactOpen(false)}
+        >
+          <section
+            className="welcome-contact-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="welcome-contact-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="welcome-contact-close"
+              aria-label="Close contact information"
+              onClick={() => setIsContactOpen(false)}
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
+            <span className="welcome-contact-icon"><FontAwesomeIcon icon={faEnvelope} /></span>
+            <span className="welcome-form-kicker">VSR GROUP OF COMPANIES</span>
+            <h2 id="welcome-contact-title">Contact us</h2>
+            <p>
+              We’d be happy to hear from you. Company contact details and
+              message delivery are not connected in this prototype. The
+              following contact details are placeholders for you to replace.
+            </p>
+            <div className="welcome-contact-details">
+              <a href="pagadalavenkateswarareddy97@gmail.com">pagadalavenkateswarareddy97@gmail.com</a>
+              <a href="tel:+910000000000">+91 9154369638</a>
+            </div>
+            <button
+              type="button"
+              className="welcome-open-workspace"
+              onClick={() => setIsContactOpen(false)}
+            >
+              Close
+            </button>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

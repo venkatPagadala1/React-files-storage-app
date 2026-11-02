@@ -18,6 +18,9 @@
   --palette-mark-dark: linear-gradient(145deg, #ff739e, #bb347b 58%, #7049b9);
   --palette-hover-light: #f9f0f5;
   --palette-hover-dark: #302039;
+  --edge-start-light: #e86ca2;
+  --edge-mid-light: #9e86f3;
+  --edge-end-light: #69c9b0;
 }
 
 .workspace-shell[data-palette="violet"],
@@ -34,6 +37,9 @@
   --palette-mark-dark: linear-gradient(145deg, #9475d5, #5c448e);
   --palette-hover-light: #f6f3fa;
   --palette-hover-dark: #382f4b;
+  --edge-start-light: #8669d4;
+  --edge-mid-light: #6ca9e9;
+  --edge-end-light: #60baa0;
 }
 
 .workspace-shell[data-palette="sunset"],
@@ -50,6 +56,9 @@
   --palette-mark-dark: linear-gradient(145deg, #d56e56, #913f35);
   --palette-hover-light: #fcf5f1;
   --palette-hover-dark: #49302e;
+  --edge-start-light: #e58b65;
+  --edge-mid-light: #c873a0;
+  --edge-end-light: #e7bd60;
 }
 
 .workspace-shell[data-palette="forest"],
@@ -66,6 +75,9 @@
   --palette-mark-dark: linear-gradient(145deg, #3eaa91, #226a5d);
   --palette-hover-light: #f2f8f4;
   --palette-hover-dark: #263d36;
+  --edge-start-light: #4ba887;
+  --edge-mid-light: #7cae6c;
+  --edge-end-light: #6aa9be;
 }
 
 .workspace-shell {
@@ -75,6 +87,11 @@
   --workspace-border: #eceef3;
   --workspace-accent: var(--palette-primary-light);
   --workspace-accent-soft: var(--palette-soft-light);
+  --edge-start: var(--edge-start-light);
+  --edge-mid: var(--edge-mid-light);
+  --edge-end: var(--edge-end-light);
+  --edge-gradient: linear-gradient(135deg, var(--edge-start), var(--edge-mid), var(--edge-end), var(--edge-start));
+  --edge-gradient-vertical: linear-gradient(180deg, var(--edge-start), var(--edge-mid), var(--edge-end), var(--edge-start));
   --palette-story: var(--palette-story-light);
   --palette-mark: var(--palette-mark-light);
 
@@ -1175,4 +1192,3 @@
 .editor-panel.is-preparation-focused .note-topic-table {
   min-width: 0;
 }
-

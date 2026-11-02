@@ -18,6 +18,7 @@ import { createId } from "../../../lib/workspaceUtils.js";
 
 function PreparationTracker({
   boardTitle,
+  isTrainingPreparation,
   draftTopics,
   boardStrokes,
   draggedTopicId,
@@ -136,9 +137,13 @@ function PreparationTracker({
     >
       <div className="note-topics-heading">
         <div>
-          <span className="editor-label">Interview preparation</span>
+          <span className="editor-label">
+            {isTrainingPreparation ? "Training preparation" : "Interview preparation"}
+          </span>
           <span className="note-topics-hint">
-            Sketch out ideas or organize your study plan.
+            {isTrainingPreparation
+              ? "Capture learning goals, key notes, and topics to revisit."
+              : "Sketch out ideas or organize your study plan."}
           </span>
         </div>
         <div className="preparation-board-actions">
@@ -423,7 +428,7 @@ function PreparationTracker({
           <div
             className="preparation-progress-track"
             role="progressbar"
-            aria-label="Interview preparation progress"
+            aria-label={`${isTrainingPreparation ? "Training" : "Interview preparation"} progress`}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress}
@@ -590,10 +595,15 @@ function PreparationTracker({
         </div>
       ) : (
         <div className="note-topics-empty">
-          <strong>Build your interview study plan</strong>
+          <strong>
+            {isTrainingPreparation
+              ? "Build your training plan"
+              : "Build your interview study plan"}
+          </strong>
           <span>
-            Add topics such as fundamentals, system design, or practice questions.
-            For each one, keep your key notes and list anything you need to revisit.
+            {isTrainingPreparation
+              ? "Add learning topics, note important ideas, and track what you want to revisit."
+              : "Add topics such as fundamentals, system design, or practice questions. For each one, keep your key notes and list anything you need to revisit."}
           </span>
         </div>
       )}

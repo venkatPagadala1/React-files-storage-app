@@ -2,22 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowPointer,
+  faArrowDown,
   faArrowRight,
+  faArrowUp,
   faChalkboard,
   faCheck,
   faCircle,
-  faCircleInfo,
+  faCopy,
   faDownload,
   faEraser,
   faExpand,
   faFont,
   faHand,
   faHighlighter,
+  faImage,
   faLayerGroup,
   faMinus,
   faPen,
   faPlus,
-  faLock,
   faRotateLeft,
   faRotateRight,
   faSquare,
@@ -25,7 +27,7 @@ import {
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import { createId } from "../../lib/workspaceUtils.js";
+import { createId, downloadBlob } from "../../lib/workspaceUtils.js";
 
 const STORAGE_KEY = "vsr-workspace-whiteboard-v1";
 const COLORS = ["#172033", "#f15b62", "#f59e0b", "#25a66a", "#4385f5", "#a855e8", "#eb4c9b", "#ffffff"];
@@ -206,6 +208,20 @@ function WhiteboardObject({
     );
   }
 
+  if (object.type === "image") {
+    return (
+      <image
+        {...commonProps}
+        href={object.src}
+        x={object.x}
+        y={object.y}
+        width={object.width}
+        height={object.height}
+        preserveAspectRatio="xMidYMid meet"
+      />
+    );
+  }
+
   if (object.type === "sticky") {
     return (
       <g {...commonProps}>
@@ -276,6 +292,9 @@ function makeExportSvg(objects, title) {
         .join("");
       return `<text x="${object.x}" y="${object.y}" fill="${svgEscape(object.color)}" font-family="sans-serif" font-size="${object.fontSize ?? 24}" font-weight="600">${text}</text>`;
     }
+    if (object.type === "image" && object.src?.startsWith("data:image/")) {
+      return `<image href="${svgEscape(object.src)}" x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
     return "";
   }).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100"><title>${svgEscape(title)}</title><defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#334155"/></marker></defs><rect width="100%" height="100%" fill="white"/>${content}</svg>`;
@@ -291,6 +310,7 @@ function Whiteboard({ onClose, theme }) {
   const [color, setColor] = useState(COLORS[1]);
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [opacity, setOpacity] = useState(100);
+  const [imageError, setImageError] = useState("");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [selectedId, setSelectedId] = useState(null);
@@ -299,11 +319,11 @@ function Whiteboard({ onClose, theme }) {
     canRedo: false,
   });
   const [draft, setDraft] = useState(null);
-  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const canvasRef = useRef(null);
   const gestureRef = useRef(null);
   const historyRef = useRef({ past: [], future: [] });
   const objectsRef = useRef(objects);
+  const imageInputRef = useRef(null);
 
   useEffect(() => {
     objectsRef.current = objects;
@@ -402,6 +422,21 @@ function Whiteboard({ onClose, theme }) {
         redo();
         return;
       }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        duplicateSelected();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key === "]") {
+        event.preventDefault();
+        moveSelectedLayer(1);
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key === "[") {
+        event.preventDefault();
+        moveSelectedLayer(-1);
+        return;
+      }
       if (event.key === "Escape") setSelectedId(null);
       if (event.key === "Delete" || event.key === "Backspace") removeSelected();
       const shortcut = TOOLS.find(
@@ -428,6 +463,94 @@ function Whiteboard({ onClose, theme }) {
     commit([...objectsRef.current, object]);
     setSelectedId(object.id);
     setTool("select");
+  }
+
+  function handleImageUpload(event) {
+    const [file] = event.target.files ?? [];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setImageError("Choose a JPG, PNG, or WebP image.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setImageError("Choose an image smaller than 10 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => setImageError("The selected image could not be read.");
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => setImageError("The selected image could not be opened.");
+      image.onload = () => {
+        const maxDimension = 1200;
+        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+          setImageError("Your browser could not process this image.");
+          return;
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const src = canvas.toDataURL("image/jpeg", 0.78);
+        const width = Math.min(420, canvas.width);
+        const height = width * canvas.height / canvas.width;
+        const object = {
+          id: createId(),
+          type: "image",
+          x: Math.max(0, 800 - width / 2),
+          y: Math.max(0, 500 - height / 2),
+          width,
+          height,
+          src,
+        };
+        commit([...objectsRef.current, object]);
+        setSelectedId(object.id);
+        setTool("select");
+        setImageError("");
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function duplicateSelected() {
+    if (!selectedId) return;
+    const selectedObject = objectsRef.current.find((object) => object.id === selectedId);
+    if (!selectedObject) return;
+    const duplicate = {
+      ...selectedObject,
+      id: createId(),
+      x: (selectedObject.x ?? 0) + 24,
+      y: (selectedObject.y ?? 0) + 24,
+      ...(selectedObject.type === "arrow"
+        ? { endX: selectedObject.endX + 24, endY: selectedObject.endY + 24 }
+        : {}),
+    };
+    commit([...objectsRef.current, duplicate]);
+    setSelectedId(duplicate.id);
+  }
+
+  function moveSelectedLayer(direction) {
+    if (!selectedId) return;
+    const current = objectsRef.current;
+    const index = current.findIndex((object) => object.id === selectedId);
+    const destination = index + direction;
+    if (index < 0 || destination < 0 || destination >= current.length) return;
+    const next = [...current];
+    [next[index], next[destination]] = [next[destination], next[index]];
+    commit(next);
+  }
+
+  function updateSelectedStyle(updates) {
+    if (!selectedId) return;
+    const next = objectsRef.current.map((object) =>
+      object.id === selectedId ? { ...object, ...updates } : object,
+    );
+    commit(next);
   }
 
   function handleCanvasPointerDown(event) {
@@ -652,6 +775,41 @@ function Whiteboard({ onClose, theme }) {
     URL.revokeObjectURL(url);
   }
 
+  async function handleExportPng() {
+    let svgUrl;
+    try {
+      const svg = makeExportSvg(objects, title);
+      svgUrl = URL.createObjectURL(
+        new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
+      );
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error("The SVG board could not be rendered."));
+        image.src = svgUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 1100;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas export is unavailable in this browser.");
+      context.drawImage(image, 0, 0);
+      const blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((result) => {
+          if (result) resolve(result);
+          else reject(new Error("The board image could not be created."));
+        }, "image/png"),
+      );
+      downloadBlob(blob, `${title.trim() || "whiteboard"}.png`);
+      setImageError("");
+    } catch (error) {
+      console.error("Could not export the whiteboard as PNG.", error);
+      setImageError("PNG export failed. Try exporting the board as SVG instead.");
+    } finally {
+      if (svgUrl) URL.revokeObjectURL(svgUrl);
+    }
+  }
+
   function setZoomAroundCenter(nextZoom) {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
     if (clamped === zoom) return;
@@ -771,6 +929,9 @@ function Whiteboard({ onClose, theme }) {
           </span>
         </div>
         <div className="whiteboard-header-actions">
+          <button type="button" className="whiteboard-export-button whiteboard-export-png" onClick={handleExportPng}>
+            <FontAwesomeIcon icon={faImage} /><span>Export PNG</span>
+          </button>
           <button type="button" className="whiteboard-export-button" onClick={handleExport}>
             <FontAwesomeIcon icon={faDownload} /><span>Export SVG</span>
           </button>
@@ -782,6 +943,14 @@ function Whiteboard({ onClose, theme }) {
 
       <div className="whiteboard-workspace">
         <aside className="whiteboard-tools" aria-label="Drawing tools">
+          <input
+            ref={imageInputRef}
+            className="visually-hidden"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleImageUpload}
+            aria-label="Choose image to add to board"
+          />
           {TOOLS.map((item, index) => (
             <span className={`whiteboard-tool-group${index === 5 ? " tool-group-separated" : ""}`} key={item.id}>
               <button
@@ -797,6 +966,12 @@ function Whiteboard({ onClose, theme }) {
               <span className="whiteboard-tooltip">{item.label}{item.shortcut && <kbd>{item.shortcut}</kbd>}</span>
             </span>
           ))}
+          <span className="whiteboard-tool-group">
+            <button type="button" className="whiteboard-tool-button" onClick={() => imageInputRef.current?.click()} aria-label="Add image" title="Add image">
+              <FontAwesomeIcon icon={faImage} />
+            </button>
+            <span className="whiteboard-tooltip">Add image</span>
+          </span>
           <span className="whiteboard-tool-group tool-group-separated">
             <button type="button" className="whiteboard-tool-button clear-tool" onClick={clearBoard} aria-label="Clear board" title="Clear board">
               <FontAwesomeIcon icon={faTrash} />
@@ -812,6 +987,11 @@ function Whiteboard({ onClose, theme }) {
             <input id="whiteboard-stroke" type="range" min="1" max="12" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
             <span>{strokeWidth}</span>
           </div>
+          <div className="whiteboard-width-presets" aria-label="Stroke width presets">
+            {[{ label: "S", value: 2 }, { label: "M", value: 4 }, { label: "L", value: 7 }, { label: "XL", value: 11 }].map((preset) => (
+              <button type="button" key={preset.label} className={strokeWidth === preset.value ? "is-selected" : ""} onClick={() => setStrokeWidth(preset.value)} aria-pressed={strokeWidth === preset.value}>{preset.label}</button>
+            ))}
+          </div>
           <div className="style-divider" />
           <span className="style-control-label">Color</span>
           <div className="whiteboard-color-list" aria-label="Stroke color">
@@ -826,6 +1006,54 @@ function Whiteboard({ onClose, theme }) {
                 onClick={() => setColor(swatch)}
               />
             ))}
+          </div>
+          {selectedId && (
+            <div className="whiteboard-selection-controls">
+              <div className="style-divider" />
+              <span className="style-control-label">Selected object</span>
+              <div className="whiteboard-selection-actions">
+                <button type="button" onClick={duplicateSelected} aria-label="Duplicate selected object" title="Duplicate (Ctrl+D)">
+                  <FontAwesomeIcon icon={faCopy} />
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveSelectedLayer(1)}
+                  aria-label="Bring selected object forward"
+                  title="Bring forward (Ctrl+])"
+                  disabled={objects.findIndex((object) => object.id === selectedId) === objects.length - 1}
+                >
+                  <FontAwesomeIcon icon={faArrowUp} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveSelectedLayer(-1)}
+                  aria-label="Send selected object backward"
+                  title="Send backward (Ctrl+[)"
+                  disabled={objects.findIndex((object) => object.id === selectedId) === 0}
+                >
+                  <FontAwesomeIcon icon={faArrowDown} />
+                </button>
+              </div>
+              {objects.find((object) => object.id === selectedId)?.type !== "image" && (
+                <>
+                  <label className="style-control-label" htmlFor="whiteboard-selected-color">Object color</label>
+                  <input
+                    id="whiteboard-selected-color"
+                    className="whiteboard-custom-color"
+                    type="color"
+                    value={objects.find((object) => object.id === selectedId)?.color ?? color}
+                    onChange={(event) => updateSelectedStyle({ color: event.target.value })}
+                  />
+                </>
+              )}
+            </div>
+          )}
+          <div className="style-divider" />
+          <label className="style-control-label" htmlFor="whiteboard-opacity">Opacity</label>
+          <div className="stroke-slider-row">
+            <input id="whiteboard-opacity" type="range" min="10" max="100" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} />
+            <span>{opacity}%</span>
           </div>
           <div className="style-divider" />
           <span className="style-control-label">Canvas</span>
@@ -847,7 +1075,9 @@ function Whiteboard({ onClose, theme }) {
               </button>
             ))}
           </div>
-          {storageMessage && <p className="whiteboard-storage-error" role="alert">{storageMessage}</p>}
+          {(storageMessage || imageError) && (
+            <p className="whiteboard-storage-error" role="alert">{imageError || storageMessage}</p>
+          )}
           <div className="whiteboard-tip">
             <span className="whiteboard-tip-icon">✦</span>
             <strong>Make space for ideas</strong>
@@ -955,7 +1185,7 @@ function Whiteboard({ onClose, theme }) {
           </svg>
           <div className="whiteboard-canvas-caption">
             <span><span className="whiteboard-live-dot" /> Board is private to this device</span>
-            <span>{objects.length} {objects.length === 1 ? "object" : "objects"}</span>
+            <span>{objects.length} {objects.length === 1 ? "object" : "objects"} · Ctrl+D duplicate · Ctrl+Z undo</span>
           </div>
         </div>
 
