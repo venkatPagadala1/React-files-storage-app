@@ -375,7 +375,6 @@ function WorkspaceSidebar({
         <>
           <div
             className={`sidebar-section-heading ${isRootDropTarget ? "is-drop-target" : ""}`}
-            hidden={activeArea !== "employee"}
             onDragOver={onRootDragOver}
             onDragLeave={onRootDragLeave}
             onDrop={onDropRoot}
@@ -392,7 +391,7 @@ function WorkspaceSidebar({
               <FontAwesomeIcon icon={faFolderPlus} />
             </button>
           </div>
-          {activeArea === "employee" && isRootFolderFormOpen && (
+          {isRootFolderFormOpen && (
             <NewFolderForm
             isSubfolder={false}
             name={newFolderName}
@@ -401,7 +400,7 @@ function WorkspaceSidebar({
             onCancel={onCancelFolderForm}
             />
           )}
-          <nav className="folder-navigation" aria-label="Document folders" hidden={activeArea !== "employee"}>
+          <nav className="folder-navigation" aria-label="Document folders">
             <FolderTree
               folders={folders}
               items={items}

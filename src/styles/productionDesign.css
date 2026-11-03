@@ -9,7 +9,7 @@
   --ui-radius-lg: 22px;
   --ui-shadow-card: 0 8px 24px rgb(22 34 52 / 5%);
 
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 252px minmax(0, 1fr);
   font-family: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.5;
@@ -25,6 +25,8 @@
 }
 
 .workspace-sidebar {
+  height: 100dvh;
+  min-height: 100dvh;
   padding: 22px 14px 18px;
   border-right: 1px solid var(--workspace-border);
   background: var(--ui-surface);
@@ -69,10 +71,10 @@
 }
 
 .workspace-area-navigation {
-  max-height: min(54vh, 570px);
+  max-height: min(44vh, 470px);
   overflow: auto;
-  padding: 8px 1px 5px;
-  gap: 16px;
+  padding: 6px 1px 4px 9px;
+  gap: 12px;
   scrollbar-width: thin;
 }
 
@@ -93,9 +95,9 @@
 }
 
 .sidebar-link {
-  min-height: 42px;
-  gap: 12px;
-  padding: 0 11px;
+  min-height: 38px;
+  gap: 10px;
+  padding: 0 10px;
   border-radius: 10px;
   color: color-mix(in srgb, var(--workspace-ink) 76%, var(--workspace-muted));
   font-size: 0.86rem;
@@ -127,6 +129,8 @@
 }
 
 .folder-navigation {
+  min-height: 0;
+  flex: 1 1 auto;
   padding-bottom: 4px;
 }
 
@@ -190,11 +194,12 @@
 .workspace-bottom-nav {
   position: fixed;
   z-index: 20;
-  right: max(16px, env(safe-area-inset-right));
+  left: 50%;
+  right: auto;
   bottom: max(14px, env(safe-area-inset-bottom));
-  left: max(16px, env(safe-area-inset-left));
-  width: min(860px, calc(100% - 32px));
-  margin-inline: auto;
+  width: min(760px, calc(100% - 32px));
+  margin: 0;
+  transform: translateX(-50%);
   padding: 2px;
   border: 1px solid transparent;
   border-radius: 17px;
@@ -206,16 +211,16 @@
     inset 0 1px 0 rgb(255 255 255 / 28%);
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   backdrop-filter: blur(18px);
 }
 
 .workspace-bottom-nav-step {
-  width: 36px;
-  min-width: 36px;
-  min-height: 48px;
+  width: 32px;
+  min-width: 32px;
+  min-height: 44px;
   display: grid;
-  flex: 0 0 36px;
+  flex: 0 0 32px;
   place-items: center;
   border: 0;
   border-radius: 12px;
@@ -246,7 +251,7 @@
   flex: 1 1 auto;
   align-items: stretch;
   justify-content: center;
-  gap: 5px;
+  gap: 3px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
@@ -254,20 +259,20 @@
 }
 
 .workspace-bottom-nav-item {
-  min-width: 76px;
-  min-height: 58px;
-  padding: 7px 10px;
+  min-width: 64px;
+  min-height: 52px;
+  padding: 6px 7px;
   display: grid;
   flex: 1 0 auto;
   align-content: center;
   justify-items: center;
-  gap: 4px;
+  gap: 3px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: var(--workspace-muted);
   font: inherit;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 650;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
@@ -860,7 +865,15 @@
 
 @media (max-width: 1050px) {
   .workspace-shell {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: 228px minmax(0, 1fr);
+  }
+
+  .workspace-shell.has-bottom-nav {
+    padding-bottom: 160px;
+  }
+
+  .workspace-bottom-nav {
+    bottom: calc(max(24px, env(safe-area-inset-bottom)) + 60px);
   }
 
   .workspace-grid {
@@ -882,7 +895,7 @@
   }
 
   .workspace-area-navigation {
-    max-height: 48vh;
+    max-height: 40vh;
   }
 
   .workspace-topbar {
@@ -910,6 +923,10 @@
 @media (max-width: 560px) {
   .workspace-shell.has-bottom-nav {
     padding-bottom: 156px;
+  }
+
+  .workspace-bottom-nav {
+    bottom: max(14px, env(safe-area-inset-bottom));
   }
 
   .workspace-shell.has-bottom-nav .assistant-launcher {
