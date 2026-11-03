@@ -15,6 +15,9 @@ function WelcomePage({
   onThemeChange,
   onPaletteChange,
   onOpenWorkspace,
+  authError = "",
+  isAuthenticating = false,
+  useRealAuthentication = false,
 }) {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [authMode, setAuthMode] = useState("signin");
@@ -23,8 +26,10 @@ function WelcomePage({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     onOpenWorkspace({
+      mode: authMode,
       name: authMode === "signup" ? String(formData.get("name") ?? "") : "",
       email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
     });
   }
 
@@ -90,11 +95,11 @@ function WelcomePage({
           </h2>
           <p className="welcome-form-intro">
             {authMode === "signin"
-              ? "Sign in to explore the VSR workspace prototype."
-              : "Set up a temporary profile to explore the prototype."}
+              ? "Sign in to open your VSR workspace."
+              : "Create an account to save your workspace across devices."}
           </p>
 
-          <div className="welcome-demo-notice">
+          <div className="welcome-demo-notice" hidden={useRealAuthentication}>
             <strong>Demo access only · no real authentication</strong>
             <span>
               Any valid email and non-empty password are accepted. Nothing is
@@ -102,6 +107,13 @@ function WelcomePage({
               only; never enter a real or reused password.
             </span>
           </div>
+          {useRealAuthentication && (
+            <div className="welcome-demo-notice">
+              <strong>Firebase account sign-in</strong>
+              <span>Your credentials are handled by Firebase Authentication.</span>
+            </div>
+          )}
+          {authError && <div className="workspace-alert" role="alert">{authError}</div>}
           <div className="welcome-auth-tabs" role="tablist" aria-label="Account options">
             <button
               type="button"
@@ -151,12 +163,18 @@ function WelcomePage({
                 type="password"
                 name="password"
                 autoComplete={authMode === "signin" ? "current-password" : "new-password"}
-                placeholder="Enter any demo password"
+                placeholder={useRealAuthentication ? "Enter your password" : "Enter any demo password"}
                 required
               />
             </label>
-            <button type="submit" className="welcome-create-button">
-              {authMode === "signin" ? "Sign in to prototype" : "Create demo account"}
+            <button type="submit" className="welcome-create-button" disabled={isAuthenticating}>
+              {isAuthenticating
+                ? "Please wait…"
+                : authMode === "signin"
+                  ? "Sign in"
+                  : useRealAuthentication
+                    ? "Create account"
+                    : "Open local preview"}
             </button>
           </form>
           <button

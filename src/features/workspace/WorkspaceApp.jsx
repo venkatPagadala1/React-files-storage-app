@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+} from "firebase/auth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { firebaseAuth, isFirebaseAuthEnabled } from "../../lib/firebaseClient.js";
+import { apiFileBlob, apiJson } from "../../lib/apiClient.js";
+import { readLocalTasks } from "../../lib/taskStorage.js";
 import {
   faFileLines,
   faPlus,
@@ -45,7 +55,10 @@ import useFilePreview from "../files/hooks/useFilePreview.js";
 import {
   deleteFolderAndItems,
   deleteItem,
+  completeLegacyImport,
+  importLegacyWorkspace,
   initializeWorkspace,
+  loadWorkspace,
   saveFolder,
   saveFolders,
   saveItem,
@@ -124,6 +137,7 @@ function WorkspaceApp() {
   const [items, setItems] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState("all");
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [loadedFileBlob, setLoadedFileBlob] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [draftPurpose, setDraftPurpose] = useState("general");
@@ -143,6 +157,12 @@ function WorkspaceApp() {
   const [dropPosition, setDropPosition] = useState("before");
   const [isRootDropTarget, setIsRootDropTarget] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthReady, setIsAuthReady] = useState(!isFirebaseAuthEnabled);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [legacyImport, setLegacyImport] = useState(null);
+  const [isImportingLegacy, setIsImportingLegacy] = useState(false);
+  const [legacyImportError, setLegacyImportError] = useState("");
   const [storageError, setStorageError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [initialCalendarData] = useState(readPreparationCalendar);
@@ -171,6 +191,7 @@ function WorkspaceApp() {
   const fileInputRef = useRef(null);
   const replaceFileInputRef = useRef(null);
   const searchInputRef = useRef(null);
+  const selectRequestRef = useRef(0);
 
   const notifications = useMemo(() => {
     const items = [];
@@ -229,6 +250,25 @@ function WorkspaceApp() {
   }, []);
 
   useEffect(() => {
+    if (!firebaseAuth) return undefined;
+    return onAuthStateChanged(firebaseAuth, (user) => {
+      setIsWorkspaceOpen(Boolean(user));
+      setIsAuthReady(true);
+      if (!user) {
+        setFolders([]);
+        setItems([]);
+        setSelectedFolderId("all");
+        setSelectedItemId(null);
+        setLoadedFileBlob(null);
+        setIsCreatingNote(false);
+        setDraftTitle("");
+        setDraftContent("");
+        setLegacyImport(null);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     function syncCalendarEvents(event) {
       if (event.key !== PREPARATION_CALENDAR_STORAGE_KEY) return;
       const latestCalendar = readPreparationCalendar();
@@ -256,18 +296,35 @@ function WorkspaceApp() {
   }, [palette]);
 
   useEffect(() => {
+    if (!isWorkspaceOpen) return undefined;
     let active = true;
+    setIsLoading(true);
+    setStorageError("");
     initializeWorkspace()
-      .then((workspace) => {
+      .then(async (workspace) => {
         if (!active) return;
         setFolders(workspace.folders);
         setItems(workspace.items);
         setDraftFolderId(workspace.folders[0]?.id ?? "");
+        if (isFirebaseAuthEnabled) {
+          const migrationStatus = await apiJson("/api/migrations/status");
+          if (active && !migrationStatus.completed) {
+            const [localWorkspace, localTasks] = await Promise.all([
+              loadWorkspace(),
+              Promise.resolve(readLocalTasks()),
+            ]);
+            if (localWorkspace.folders.length || localWorkspace.items.length || localTasks.length) {
+              setLegacyImport({ ...localWorkspace, tasks: localTasks });
+            } else {
+              await completeLegacyImport();
+            }
+          }
+        }
       })
       .catch((error) => {
         if (active) {
           setStorageError(
-            `Could not open this browser's workspace storage: ${error.message}`,
+            `Could not load the workspace: ${error.message}`,
           );
         }
       })
@@ -278,7 +335,7 @@ function WorkspaceApp() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isWorkspaceOpen]);
 
   useEffect(() => {
     function handleWorkspaceKeys(event) {
@@ -310,7 +367,10 @@ function WorkspaceApp() {
     };
   }, [isFileViewerOpen]);
 
-  const activeItem = items.find((item) => item.id === selectedItemId) ?? null;
+  const storedActiveItem = items.find((item) => item.id === selectedItemId) ?? null;
+  const activeItem = storedActiveItem?.kind === "file" && loadedFileBlob?.id === storedActiveItem.id
+    ? { ...storedActiveItem, blob: loadedFileBlob.blob }
+    : storedActiveItem;
   const {
     filePreviewUrl,
     setFilePreviewUrl,
@@ -419,6 +479,7 @@ function WorkspaceApp() {
 
   function selectFolder(folderId) {
     if (!confirmDiscardDraft()) return;
+    selectRequestRef.current += 1;
     setActiveArea("employee");
     setIsBoardOpen(false);
     clearFileDocument();
@@ -426,6 +487,7 @@ function WorkspaceApp() {
     setPreviewSearch("");
     setSelectedFolderId(folderId);
     setSelectedItemId(null);
+    setLoadedFileBlob(null);
     setIsDocumentListHidden(false);
     setFilePreviewUrl("");
     setIsEditingFile(false);
@@ -441,27 +503,40 @@ function WorkspaceApp() {
     setIsSidebarOpen(false);
   }
 
-  function selectItem(item) {
+  async function selectItem(item) {
     if (!confirmDiscardDraft()) return;
+    const requestId = ++selectRequestRef.current;
+    let itemToOpen = item;
+    if (item.kind === "file" && isFirebaseAuthEnabled && !(item.blob instanceof Blob)) {
+      try {
+        const blob = await apiFileBlob(item.id);
+        if (requestId !== selectRequestRef.current) return;
+        itemToOpen = { ...item, blob };
+      } catch (error) {
+        setStatusMessage(`Could not open "${item.title}": ${error.message}`);
+        return;
+      }
+    }
     setActiveArea("employee");
     setIsBoardOpen(false);
     clearFileDocument();
     setIsFileViewerOpen(false);
     setPreviewSearch("");
-    setSelectedItemId(item.id);
-    setIsDocumentListHidden(item.kind === "note");
-    setFilePreviewUrl(createFilePreviewUrl(item));
+    setSelectedItemId(itemToOpen.id);
+    setLoadedFileBlob(itemToOpen.kind === "file" ? { id: itemToOpen.id, blob: itemToOpen.blob } : null);
+    setIsDocumentListHidden(itemToOpen.kind === "note");
+    setFilePreviewUrl(createFilePreviewUrl(itemToOpen));
     setIsEditingFile(false);
     setIsExternalEditActive(false);
     setFileDraftContent("");
     setSavedFileContent("");
     setIsCreatingNote(false);
-    setDraftTitle(item.title);
-    setDraftContent(item.content ?? "");
-    setDraftPurpose(item.purpose === "training" ? "training" : "general");
+    setDraftTitle(itemToOpen.title);
+    setDraftContent(itemToOpen.content ?? "");
+    setDraftPurpose(itemToOpen.purpose === "training" ? "training" : "general");
     setDraftTopics(
-      item.kind === "note"
-        ? (item.topics ?? []).map((topic, index) => ({
+      itemToOpen.kind === "note"
+        ? (itemToOpen.topics ?? []).map((topic, index) => ({
             id: topic.id ?? `topic-${index}`,
             title: topic.title ?? "",
             importantNotes: topic.importantNotes ?? "",
@@ -474,13 +549,13 @@ function WorkspaceApp() {
         : [],
     );
     setDraftBoardStrokes(
-      item.kind === "note" && Array.isArray(item.boardStrokes)
-        ? item.boardStrokes
+      itemToOpen.kind === "note" && Array.isArray(itemToOpen.boardStrokes)
+        ? itemToOpen.boardStrokes
         : [],
     );
-    setDraftFolderId(item.folderId);
-    if (item.kind === "file") {
-      void loadFileDocument(item);
+    setDraftFolderId(itemToOpen.folderId);
+    if (itemToOpen.kind === "file") {
+      void loadFileDocument(itemToOpen);
     }
   }
 
@@ -902,6 +977,10 @@ function WorkspaceApp() {
     event.target.value = "";
     if (!file) return;
     if (!confirmDiscardDraft()) return;
+    if (isFirebaseAuthEnabled && file.size > 25 * 1024 * 1024) {
+      setStatusMessage("Files uploaded to the cloud must be 25 MB or smaller.");
+      return;
+    }
 
     const folderId =
       selectedFolderId === "all" ? folders[0]?.id : selectedFolderId;
@@ -916,7 +995,7 @@ function WorkspaceApp() {
     }
     if (
       !window.confirm(
-        `Upload "${file.name}" to "${getFolderPath(folderId, folders)}" and save it on this device?`,
+        `Upload "${file.name}" to "${getFolderPath(folderId, folders)}" and save it ${isFirebaseAuthEnabled ? "to your cloud workspace" : "on this device"}?`,
       )
     ) {
       setStatusMessage(`Upload cancelled for "${file.name}".`);
@@ -941,6 +1020,7 @@ function WorkspaceApp() {
       setItems((currentItems) => [fileItem, ...currentItems]);
       setSelectedFolderId(folderId);
       setSelectedItemId(fileItem.id);
+      setLoadedFileBlob({ id: fileItem.id, blob: file });
       setFilePreviewUrl(createFilePreviewUrl(fileItem));
       void loadFileDocument(fileItem);
       setIsEditingFile(false);
@@ -951,7 +1031,7 @@ function WorkspaceApp() {
       setIsCreatingNote(false);
       setDraftTitle(fileItem.title);
       setDraftContent("");
-      setStatusMessage(`Uploaded "${file.name}" to this device.`);
+      setStatusMessage(`Uploaded "${file.name}" ${isFirebaseAuthEnabled ? "to your cloud workspace" : "to this device"}.`);
     } catch (error) {
       setStatusMessage(`Could not store file: ${error.message}`);
     }
@@ -962,6 +1042,10 @@ function WorkspaceApp() {
     event.target.value = "";
     if (!file || activeItem?.kind !== "file") return;
     if (!confirmDiscardDraft()) return;
+    if (isFirebaseAuthEnabled && file.size > 25 * 1024 * 1024) {
+      setStatusMessage("Files uploaded to the cloud must be 25 MB or smaller.");
+      return;
+    }
 
     const now = getCurrentTimestamp();
     const updatedFile = {
@@ -982,6 +1066,7 @@ function WorkspaceApp() {
       );
       setSelectedFolderId(updatedFile.folderId);
       setSelectedItemId(updatedFile.id);
+      setLoadedFileBlob({ id: updatedFile.id, blob: file });
       setFilePreviewUrl(createFilePreviewUrl(updatedFile));
       setIsEditingFile(false);
       setIsExternalEditActive(false);
@@ -1042,11 +1127,12 @@ function WorkspaceApp() {
           item.id === updatedFile.id ? updatedFile : item,
         ),
       );
+      setLoadedFileBlob({ id: updatedFile.id, blob });
       setFilePreviewUrl(createFilePreviewUrl(updatedFile));
       setFileDocumentText(fileDraftContent);
       setSavedFileContent(fileDraftContent);
       setIsEditingFile(false);
-      setStatusMessage(`Saved changes to "${updatedFile.title}" on this device.`);
+      setStatusMessage(`Saved changes to "${updatedFile.title}" ${isFirebaseAuthEnabled ? "to your cloud workspace" : "on this device"}.`);
     } catch (error) {
       setStatusMessage(`Could not save changes to "${activeItem.title}": ${error.message}`);
     }
@@ -1069,7 +1155,7 @@ function WorkspaceApp() {
 
   async function handleDeleteItem(itemToDelete = activeItem) {
     if (!itemToDelete) return;
-    if (!window.confirm(`Permanently delete "${itemToDelete.title}" from this device?`)) {
+    if (!window.confirm(`Permanently delete "${itemToDelete.title}" ${isFirebaseAuthEnabled ? "from your cloud workspace" : "from this device"}?`)) {
       return;
     }
 
@@ -1080,6 +1166,7 @@ function WorkspaceApp() {
       );
       if (selectedItemId === itemToDelete.id) {
         setSelectedItemId(null);
+        setLoadedFileBlob(null);
         setFilePreviewUrl("");
         clearFileDocument();
         setIsEditingFile(false);
@@ -1090,7 +1177,7 @@ function WorkspaceApp() {
         setDraftTopics([]);
         setIsCreatingNote(false);
       }
-      setStatusMessage(`Deleted "${itemToDelete.title}" from this device.`);
+      setStatusMessage(`Deleted "${itemToDelete.title}" ${isFirebaseAuthEnabled ? "from your cloud workspace" : "from this device"}.`);
     } catch (error) {
       setStatusMessage(`Could not delete item: ${error.message}`);
     }
@@ -1204,6 +1291,76 @@ function WorkspaceApp() {
     setIsWorkspaceOpen(true);
   }
 
+  async function openWorkspace(authDetails = {}) {
+    setAuthError("");
+    if (!firebaseAuth) {
+      openLocalWorkspace(authDetails);
+      return;
+    }
+
+    setIsAuthenticating(true);
+    try {
+      const email = authDetails.email.trim();
+      const password = authDetails.password;
+      const credential = authDetails.mode === "signup"
+        ? await createUserWithEmailAndPassword(firebaseAuth, email, password)
+        : await signInWithEmailAndPassword(firebaseAuth, email, password);
+
+      if (authDetails.mode === "signup" && authDetails.name.trim()) {
+        await updateProfile(credential.user, { displayName: authDetails.name.trim() });
+      }
+      setProfile((currentProfile) => ({
+        ...currentProfile,
+        name: credential.user.displayName || authDetails.name.trim() || currentProfile.name,
+        email: credential.user.email || email,
+      }));
+      setIsWorkspaceOpen(true);
+    } catch (error) {
+      const authMessages = {
+        "auth/email-already-in-use": "An account already exists for this email. Sign in instead.",
+        "auth/invalid-credential": "Email or password is incorrect.",
+        "auth/invalid-email": "Enter a valid email address.",
+        "auth/weak-password": "Choose a password with at least 6 characters.",
+        "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
+        "auth/network-request-failed": "Could not reach Firebase. Check your connection and try again.",
+      };
+      setAuthError(authMessages[error.code] || error.message || "Authentication failed.");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }
+
+  async function importBrowserWorkspace() {
+    if (!legacyImport) return;
+    setIsImportingLegacy(true);
+    setLegacyImportError("");
+    try {
+      const workspace = await importLegacyWorkspace(legacyImport);
+      setFolders(workspace.folders);
+      setItems(workspace.items);
+      setLegacyImport(null);
+    } catch (error) {
+      setLegacyImportError(`Could not import browser data: ${error.message}`);
+    } finally {
+      setIsImportingLegacy(false);
+    }
+  }
+
+  async function skipBrowserImport() {
+    setIsImportingLegacy(true);
+    setLegacyImportError("");
+    try {
+      const workspace = await completeLegacyImport();
+      setFolders(workspace.folders);
+      setItems(workspace.items);
+      setLegacyImport(null);
+    } catch (error) {
+      setLegacyImportError(`Could not finish setup: ${error.message}`);
+    } finally {
+      setIsImportingLegacy(false);
+    }
+  }
+
   function saveProfile(nextProfile) {
     try {
       window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
@@ -1216,6 +1373,10 @@ function WorkspaceApp() {
     }
   }
 
+  if (isFirebaseAuthEnabled && !isAuthReady) {
+    return <main className="welcome-auth-loading">Checking your sign-in…</main>;
+  }
+
   if (!isWorkspaceOpen) {
     return (
       <WelcomePage
@@ -1223,7 +1384,10 @@ function WorkspaceApp() {
         palette={palette}
         onThemeChange={setTheme}
         onPaletteChange={setPalette}
-        onOpenWorkspace={openLocalWorkspace}
+        onOpenWorkspace={openWorkspace}
+        authError={authError}
+        isAuthenticating={isAuthenticating}
+        useRealAuthentication={isFirebaseAuthEnabled}
       />
     );
   }
@@ -1235,6 +1399,44 @@ function WorkspaceApp() {
       data-palette={palette}
       data-area={isBoardOpen ? "whiteboard" : activeArea}
     >
+      {legacyImport && (
+        <div className="share-modal-backdrop legacy-import-backdrop">
+          <section
+            className="share-modal legacy-import-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legacy-import-title"
+          >
+            <div className="share-modal-icon">
+              <FontAwesomeIcon icon={faFileLines} />
+            </div>
+            <h2 id="legacy-import-title">Import this browser’s workspace?</h2>
+            <p>
+              This browser has {legacyImport.folders.length} folder{legacyImport.folders.length === 1 ? "" : "s"}, {legacyImport.items.length} document{legacyImport.items.length === 1 ? "" : "s"}, and {legacyImport.tasks.length} task{legacyImport.tasks.length === 1 ? "" : "s"}. Import them into your signed-in cloud workspace? The browser copy will remain here.
+            </p>
+            {legacyImportError && <div className="workspace-alert" role="alert">{legacyImportError}</div>}
+            <div className="legacy-import-actions">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={skipBrowserImport}
+                disabled={isImportingLegacy}
+              >
+                Start fresh
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={importBrowserWorkspace}
+                disabled={isImportingLegacy}
+              >
+                {isImportingLegacy ? "Importing…" : "Import workspace"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <WorkspaceSidebar
         isOpen={isSidebarOpen}
         activeArea={activeArea}
@@ -1599,13 +1801,9 @@ function WorkspaceApp() {
             <div className="share-modal-icon">
               <FontAwesomeIcon icon={faShareNodes} />
             </div>
-            <h2 id="share-modal-title">Secure sharing is not configured</h2>
+            <h2 id="share-modal-title">Workspace sharing</h2>
             <p>
-              Notes and files are stored unencrypted in this browser on this
-              device. Do not store sensitive information here. Private sharing
-              with invited, signed-in collaborators requires authentication,
-              server-enforced access rules, and private file storage; none are
-              configured yet.
+              Cloud folders, notes, files, and tasks are private to your signed-in account. Sharing them with another account is not enabled. Calendar, whiteboard, profile, and company demo data remain in this browser. Do not store sensitive company information in this prototype.
             </p>
             <button
               type="button"
@@ -1640,21 +1838,27 @@ function WorkspaceApp() {
             <div className="share-modal-icon">
               <FontAwesomeIcon icon={faRightFromBracket} />
             </div>
-            <h2 id="signout-modal-title">End this demo session?</h2>
+            <h2 id="signout-modal-title">Sign out of this workspace?</h2>
             <p>
-              This mock sign-in did not create an account or protect local
-              files. Returning to the sign-in page will not delete documents
-              stored in this browser.
+              Your cloud documents remain saved to your account. Signing out will not delete the browser-local calendar, whiteboard, profile, or theme settings.
             </p>
             <button
               type="button"
               className="save-note-button"
-              onClick={() => {
+              onClick={async () => {
                 setIsSignoutInfoOpen(false);
-                setIsWorkspaceOpen(false);
+                if (firebaseAuth) {
+                  try {
+                    await signOut(firebaseAuth);
+                  } catch (error) {
+                    setAuthError(`Could not sign out: ${error.message}`);
+                  }
+                } else {
+                  setIsWorkspaceOpen(false);
+                }
               }}
             >
-              Return to sign-in
+              Sign out
             </button>
           </section>
         </div>

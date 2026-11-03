@@ -87,7 +87,7 @@ export async function loadWorkspace() {
   return { folders, items };
 }
 
-export async function initializeWorkspace() {
+export async function initializeLocalWorkspace() {
   const database = await openDatabase();
   const transaction = database.transaction(FOLDERS_STORE, "readwrite");
   const completion = transactionCompletion(transaction);
@@ -109,7 +109,16 @@ export async function initializeWorkspace() {
   return loadWorkspace();
 }
 
+export async function initializeWorkspace() {
+  if (isFirebaseAuthEnabled) return apiJson("/api/workspace");
+  return initializeLocalWorkspace();
+}
+
 export async function saveFolder(folder) {
+  if (isFirebaseAuthEnabled) {
+    await apiJson("/api/folders", { method: "POST", body: folder });
+    return;
+  }
   const database = await openDatabase();
   const transaction = database.transaction(FOLDERS_STORE, "readwrite");
   const completion = transactionCompletion(transaction);
@@ -118,6 +127,10 @@ export async function saveFolder(folder) {
 }
 
 export async function saveFolders(folders) {
+  if (isFirebaseAuthEnabled) {
+    await apiJson("/api/folders/bulk", { method: "PUT", body: { folders } });
+    return;
+  }
   const database = await openDatabase();
   const transaction = database.transaction(FOLDERS_STORE, "readwrite");
   const completion = transactionCompletion(transaction);
@@ -127,6 +140,14 @@ export async function saveFolders(folders) {
 }
 
 export async function saveItem(item) {
+  if (isFirebaseAuthEnabled) {
+    const { blob, ...document } = item;
+    await apiJson("/api/items", { method: "PUT", body: document });
+    if (item.kind === "file" && blob instanceof Blob) {
+      await uploadItemFile(item, blob);
+    }
+    return;
+  }
   const database = await openDatabase();
   const transaction = database.transaction(ITEMS_STORE, "readwrite");
   const completion = transactionCompletion(transaction);
@@ -135,6 +156,10 @@ export async function saveItem(item) {
 }
 
 export async function deleteItem(itemId) {
+  if (isFirebaseAuthEnabled) {
+    await apiJson(`/api/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+    return;
+  }
   const database = await openDatabase();
   const transaction = database.transaction(ITEMS_STORE, "readwrite");
   const completion = transactionCompletion(transaction);
@@ -143,6 +168,11 @@ export async function deleteItem(itemId) {
 }
 
 export async function deleteFolderAndItems(folderId) {
+  if (isFirebaseAuthEnabled) {
+    const ids = Array.isArray(folderId) ? folderId : [folderId];
+    await apiJson("/api/folders", { method: "DELETE", body: { ids } });
+    return;
+  }
   const database = await openDatabase();
   const transaction = database.transaction(
     [FOLDERS_STORE, ITEMS_STORE],
@@ -171,4 +201,40 @@ export async function deleteFolderAndItems(folderId) {
   );
 
   await Promise.all([...deleteRequests, completion]);
+}
+import { apiJson, uploadItemFile } from "./apiClient.js";
+import { isFirebaseAuthEnabled } from "./firebaseClient.js";
+export async function importLegacyWorkspace({ folders, items, tasks }) {
+  await apiJson("/api/migrations/import", {
+    method: "POST",
+    body: {
+      folders: folders.map(({ id, name, parentId, color, order }) => ({
+        id,
+        name,
+        parentId,
+        color,
+        order,
+      })),
+      items: items.map((item) => {
+        const document = { ...item };
+        delete document.blob;
+        return document;
+      }),
+      tasks,
+    },
+  });
+
+  for (const item of items) {
+    if (item.kind === "file" && item.blob instanceof Blob) {
+      await uploadItemFile(item, item.blob);
+    }
+  }
+
+  await apiJson("/api/migrations/complete", { method: "POST", body: {} });
+  return apiJson("/api/workspace");
+}
+
+export async function completeLegacyImport() {
+  await apiJson("/api/migrations/complete", { method: "POST", body: {} });
+  return apiJson("/api/workspace");
 }

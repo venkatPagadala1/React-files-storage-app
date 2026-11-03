@@ -2,64 +2,69 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faNoteSticky, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { createId } from "../../../lib/workspaceUtils.js";
-
-const STICKY_TASKS_STORAGE_KEY = "vsr-sticky-tasks-v1";
-
-function readTasks() {
-  try {
-    const savedTasks = window.localStorage.getItem(STICKY_TASKS_STORAGE_KEY);
-    if (!savedTasks) return [];
-    const parsedTasks = JSON.parse(savedTasks);
-    if (!Array.isArray(parsedTasks)) return [];
-    return parsedTasks.filter(
-      (task) =>
-        task &&
-        typeof task.id === "string" &&
-        typeof task.title === "string" &&
-        typeof task.done === "boolean",
-    );
-  } catch (error) {
-    console.error("Could not load sticky tasks.", error);
-    return [];
-  }
-}
+import { deleteTask, loadTasks, saveTask } from "../../../lib/taskStorage.js";
 
 function StickyNotes() {
-  const [tasks, setTasks] = useState(readTasks);
+  const [tasks, setTasks] = useState([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [storageError, setStorageError] = useState("");
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STICKY_TASKS_STORAGE_KEY, JSON.stringify(tasks));
-      setStorageError("");
-    } catch (error) {
-      console.error("Could not save sticky tasks.", error);
-      setStorageError("Tasks could not be saved in this browser.");
-    }
-  }, [tasks]);
+    let active = true;
+    loadTasks()
+      .then((savedTasks) => {
+        if (active) setTasks(savedTasks);
+      })
+      .catch((error) => {
+        if (active) setStorageError(`Tasks could not be loaded: ${error.message}`);
+      })
+      .finally(() => {
+        if (active) setIsTasksLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  function addTask(event) {
+  async function addTask(event) {
     event.preventDefault();
     const title = taskTitle.trim();
     if (!title) return;
-    setTasks((currentTasks) => [
-      { id: createId(), title, done: false, createdAt: Date.now() },
-      ...currentTasks,
-    ]);
-    setTaskTitle("");
+    const task = { id: createId(), title, done: false, createdAt: Date.now() };
+    try {
+      await saveTask(task);
+      setTasks((currentTasks) => [task, ...currentTasks]);
+      setTaskTitle("");
+      setStorageError("");
+    } catch (error) {
+      setStorageError(`Task could not be saved: ${error.message}`);
+    }
   }
 
-  function toggleTask(taskId) {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, done: !task.done } : task,
-      ),
-    );
+  async function toggleTask(taskId) {
+    const task = tasks.find((candidate) => candidate.id === taskId);
+    if (!task) return;
+    const updatedTask = { ...task, done: !task.done };
+    try {
+      await saveTask(updatedTask);
+      setTasks((currentTasks) =>
+        currentTasks.map((candidate) => candidate.id === taskId ? updatedTask : candidate),
+      );
+      setStorageError("");
+    } catch (error) {
+      setStorageError(`Task could not be updated: ${error.message}`);
+    }
   }
 
-  function deleteTask(taskId) {
-    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+  async function removeTask(taskId) {
+    try {
+      await deleteTask(taskId);
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+      setStorageError("");
+    } catch (error) {
+      setStorageError(`Task could not be deleted: ${error.message}`);
+    }
   }
 
   const completedCount = tasks.filter((task) => task.done).length;
@@ -99,7 +104,9 @@ function StickyNotes() {
 
       {storageError && <p className="sticky-task-error" role="alert">{storageError}</p>}
 
-      {tasks.length ? (
+      {isTasksLoading ? (
+        <div className="sticky-notes-empty" role="status">Loading tasks…</div>
+      ) : tasks.length ? (
         <div className="sticky-task-grid" role="list" aria-label="Your tasks">
           {tasks.map((task, index) => (
             <article
@@ -123,7 +130,7 @@ function StickyNotes() {
                   className="sticky-task-delete"
                   aria-label={`Delete task: ${task.title}`}
                   title="Delete task"
-                  onClick={() => deleteTask(task.id)}
+                  onClick={() => removeTask(task.id)}
                 >
                   <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
                 </button>
