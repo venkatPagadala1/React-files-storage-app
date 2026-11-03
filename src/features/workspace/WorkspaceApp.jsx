@@ -32,6 +32,7 @@ import AssistantPanel from "../assistant/components/AssistantPanel.jsx";
 import useAssistant from "../assistant/hooks/useAssistant.js";
 import WorkspaceSidebar from "./components/WorkspaceSidebar.jsx";
 import WorkspaceBottomNav from "./components/WorkspaceBottomNav.jsx";
+import StickyNotes from "./components/StickyNotes.jsx";
 import WorkspaceHeader from "./components/WorkspaceHeader.jsx";
 import WelcomePage from "./components/WelcomePage.jsx";
 import CompanyHub from "./components/CompanyHub.jsx";
@@ -55,6 +56,7 @@ const roleFeatures = {
     "company",
     "company-resources",
     "employee",
+    "sticky-notes",
     "training",
     "calendar",
     "profile",
@@ -68,6 +70,7 @@ const roleFeatures = {
     "company",
     "company-resources",
     "employee",
+    "sticky-notes",
     "training",
     "calendar",
     "profile",
@@ -78,6 +81,7 @@ const roleFeatures = {
   Employee: [
     "company-resources",
     "employee",
+    "sticky-notes",
     "training",
     "calendar",
     "profile",
@@ -326,7 +330,9 @@ function WorkspaceApp() {
   });
   const fileSearchMatchCount = countMatches(fileDocumentText, previewSearch);
   const isPreparationTrackerFocused =
-    isDocumentListHidden && (isCreatingNote || activeItem?.kind === "note");
+    activeArea === "employee" &&
+    isDocumentListHidden &&
+    (isCreatingNote || activeItem?.kind === "note");
   const activeFolder = folders.find((folder) => folder.id === selectedFolderId);
   const selectedFolderIds = useMemo(
     () =>
@@ -1346,7 +1352,9 @@ function WorkspaceApp() {
           }}
         />
 
-          {activeArea === "employee" ? (
+          {activeArea === "sticky-notes" ? (
+            <StickyNotes />
+          ) : activeArea === "employee" ? (
             <>
               <div className="workspace-security-notice" role="note">
                 <strong>Do not store sensitive information here yet.</strong>

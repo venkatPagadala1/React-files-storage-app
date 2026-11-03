@@ -9,6 +9,7 @@ import {
   faFileLines,
   faFolder,
   faFolderPlus,
+  faNoteSticky,
   faUserShield,
   faTrash,
   faXmark,
@@ -310,6 +311,15 @@ function WorkspaceSidebar({
               <span>Documents</span>
               <span className="sidebar-count">{items.length}</span>
             </button>
+            {canView("sticky-notes") && <button
+              type="button"
+              className={`sidebar-link ${activeArea === "sticky-notes" && !isBoardOpen ? "active" : ""}`}
+              onClick={() => onNavigateArea("sticky-notes")}
+              aria-current={activeArea === "sticky-notes" && !isBoardOpen ? "page" : undefined}
+            >
+              <FontAwesomeIcon icon={faNoteSticky} />
+              <span>Sticky notes</span>
+            </button>}
             {canView("profile") && <button
               type="button"
               className={`sidebar-link ${activeArea === "profile" && !isBoardOpen ? "active" : ""}`}

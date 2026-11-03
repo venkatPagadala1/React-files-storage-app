@@ -61,6 +61,8 @@ function WorkspaceHeader({
                 ? "My profile"
         : activeArea === "training"
         ? "Training & learning"
+        : activeArea === "sticky-notes"
+        ? "Sticky notes"
         : folderName ?? "All documents";
   const searchLabel =
     isEmployeeArea ? "Search notes and files" : "Search notes and files in employee workspace";
@@ -273,6 +275,8 @@ function WorkspaceHeader({
                         ? "Manage the demo identity shown on your learning comments."
                 : activeArea === "training"
                   ? "Prepare, learn, and capture your next steps."
+                  : activeArea === "sticky-notes"
+                    ? "Capture quick tasks and check them off as you go."
                   : "Keep your documents and preparation organized."}
           </p>
         </div>
