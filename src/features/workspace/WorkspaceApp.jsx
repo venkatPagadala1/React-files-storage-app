@@ -15,6 +15,10 @@ import {
   THEME_STORAGE_KEY,
 } from "../../lib/workspaceConfig.js";
 import {
+  PREPARATION_CALENDAR_STORAGE_KEY,
+  readPreparationCalendar,
+} from "../../lib/calendarStorage.js";
+import {
   countMatches,
   createId,
   downloadBlob,
@@ -137,6 +141,11 @@ function WorkspaceApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [storageError, setStorageError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [initialCalendarData] = useState(readPreparationCalendar);
+  const [calendarEvents, setCalendarEvents] = useState(initialCalendarData.events);
+  const [calendarIssue, setCalendarIssue] = useState(initialCalendarData.error);
+  const [requestedCalendarDate, setRequestedCalendarDate] = useState("");
+  const [notificationClock, setNotificationClock] = useState(() => Date.now());
   const [isShareInfoOpen, setIsShareInfoOpen] = useState(false);
   const [isSignoutInfoOpen, setIsSignoutInfoOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -158,6 +167,73 @@ function WorkspaceApp() {
   const fileInputRef = useRef(null);
   const replaceFileInputRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  const notifications = useMemo(() => {
+    const items = [];
+    if (storageError) {
+      items.push({
+        id: "workspace-storage",
+        kind: "issue",
+        targetArea: "employee",
+        title: "Workspace storage issue",
+        detail: storageError,
+      });
+    }
+    if (calendarIssue) {
+      items.push({
+        id: "calendar-storage",
+        kind: "issue",
+        targetArea: "calendar",
+        title: "Calendar issue",
+        detail: calendarIssue,
+      });
+    }
+    if (statusMessage && /could not|couldn't|invalid|error|blocked|failed|already exists|choose|add a title/i.test(statusMessage)) {
+      items.push({
+        id: "workspace-update",
+        kind: "issue",
+        targetArea: /profile/i.test(statusMessage) ? "profile" : "employee",
+        title: "Workspace needs attention",
+        detail: statusMessage,
+      });
+    }
+
+    const now = new Date(notificationClock);
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const upcomingEvents = calendarEvents
+      .map((event) => ({
+        ...event,
+        startsAt: new Date(`${event.date}T${event.startTime || "00:00"}:00`),
+      }))
+      .filter((event) => !Number.isNaN(event.startsAt.getTime()) && event.startsAt >= now && event.startsAt <= nextWeek)
+      .sort((first, second) => first.startsAt - second.startsAt)
+      .map((event) => ({
+        id: `event-${event.id}`,
+        kind: "event",
+        date: event.date,
+        title: event.title,
+        detail: `${event.startsAt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${event.startTime}${event.endTime ? `–${event.endTime}` : ""} · ${event.type}`,
+      }));
+
+    return [...items, ...upcomingEvents];
+  }, [calendarEvents, calendarIssue, notificationClock, statusMessage, storageError]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNotificationClock(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    function syncCalendarEvents(event) {
+      if (event.key !== PREPARATION_CALENDAR_STORAGE_KEY) return;
+      const latestCalendar = readPreparationCalendar();
+      setCalendarEvents(latestCalendar.events);
+      setCalendarIssue(latestCalendar.error);
+    }
+    window.addEventListener("storage", syncCalendarEvents);
+    return () => window.removeEventListener("storage", syncCalendarEvents);
+  }, []);
 
   useEffect(() => {
     try {
@@ -1151,6 +1227,7 @@ function WorkspaceApp() {
       className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}`}
       data-theme={theme}
       data-palette={palette}
+      data-area={isBoardOpen ? "whiteboard" : activeArea}
     >
       <WorkspaceSidebar
         isOpen={isSidebarOpen}
@@ -1243,7 +1320,12 @@ function WorkspaceApp() {
           canShare={roleFeatures[previewRole].includes("share")}
           fileInputRef={fileInputRef}
           replaceFileInputRef={replaceFileInputRef}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(query) => {
+            setSearchQuery(query);
+            if (query.trim() && activeArea !== "employee") {
+              navigateToArea("employee");
+            }
+          }}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onOpenSharing={() => setIsShareInfoOpen(true)}
           onThemeChange={setTheme}
@@ -1253,6 +1335,15 @@ function WorkspaceApp() {
           onUpload={handleUpload}
           onReplaceFile={handleReplaceFile}
           onNewNote={startNewNote}
+          notifications={notifications}
+          onOpenNotification={(notification) => {
+            if (notification.date) {
+              setRequestedCalendarDate({ date: notification.date, requestId: createId() });
+              navigateToArea("calendar");
+              return;
+            }
+            navigateToArea(notification.targetArea ?? "employee");
+          }}
         />
 
           {activeArea === "employee" ? (
@@ -1412,7 +1503,12 @@ function WorkspaceApp() {
           )}
             </>
           ) : activeArea === "calendar" ? (
-            <PreparationCalendar profile={profile} />
+            <PreparationCalendar
+              profile={profile}
+              navigationRequest={requestedCalendarDate}
+              onEventsChange={setCalendarEvents}
+              onIssueChange={setCalendarIssue}
+            />
           ) : activeArea === "profile" ? (
             <UserProfile profile={profile} onSave={saveProfile} />
           ) : (

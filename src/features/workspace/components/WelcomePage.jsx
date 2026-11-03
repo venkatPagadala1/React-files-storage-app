@@ -29,7 +29,7 @@ function WelcomePage({
   }
 
   return (
-    <main className="welcome-page" data-theme={theme} data-palette={palette}>
+    <main className="welcome-page" data-theme={theme} data-palette={palette} data-area="welcome">
       <section className="welcome-story" aria-labelledby="welcome-heading">
         <div className="welcome-brand">
           <span className="welcome-brand-logo">
@@ -198,8 +198,8 @@ function WelcomePage({
               following contact details are placeholders for you to replace.
             </p>
             <div className="welcome-contact-details">
-              <a href="pagadalavenkateswarareddy97@gmail.com">pagadalavenkateswarareddy97@gmail.com</a>
-              <a href="tel:+910000000000">+91 9154369638</a>
+              <a href="mailto:pagadalavenkateswarareddy97@gmail.com">pagadalavenkateswarareddy97@gmail.com</a>
+              <a href="tel:+919154369638">+91 9154369638</a>
             </div>
             <button
               type="button"

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarDays,
@@ -9,8 +9,8 @@ import {
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { PREPARATION_CALENDAR_STORAGE_KEY, readPreparationCalendar } from "../../../lib/calendarStorage.js";
 
-const STORAGE_KEY = "vsr-preparation-calendar-v1";
 const eventTypes = ["Study session", "Interview preparation", "Training", "Project review"];
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -21,50 +21,9 @@ function toDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-function getStoredEvents() {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (!stored) return [];
-
-  const parsed = JSON.parse(stored);
-  if (
-    !Array.isArray(parsed) ||
-    parsed.some(
-      (event) =>
-        !event ||
-        typeof event.id !== "string" ||
-        typeof event.title !== "string" ||
-        typeof event.date !== "string" ||
-        typeof event.startTime !== "string" ||
-        typeof event.endTime !== "string" ||
-        typeof event.type !== "string" ||
-        (event.comments !== undefined &&
-          (!Array.isArray(event.comments) ||
-            event.comments.some(
-              (comment) =>
-                !comment ||
-                typeof comment.id !== "string" ||
-                typeof comment.author !== "string" ||
-                typeof comment.body !== "string" ||
-                typeof comment.createdAt !== "string",
-            ))),
-    )
-  ) {
-    throw new Error("Saved calendar data is invalid.");
-  }
-  return parsed;
-}
-
 function getInitialCalendarState() {
-  try {
-    return { events: getStoredEvents(), storageReady: true, message: "" };
-  } catch (error) {
-    console.error("Could not load preparation calendar events.", error);
-    return {
-      events: [],
-      storageReady: false,
-      message: "Calendar data could not be loaded from this browser.",
-    };
-  }
+  const result = readPreparationCalendar();
+  return { events: result.events, storageReady: !result.error, message: result.error };
 }
 
 function formatSelectedDate(dateKey) {
@@ -76,7 +35,7 @@ function formatSelectedDate(dateKey) {
   });
 }
 
-function PreparationCalendar({ profile }) {
+function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIssueChange }) {
   const [initialCalendarState] = useState(getInitialCalendarState);
   const [events, setEvents] = useState(initialCalendarState.events);
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -89,6 +48,20 @@ function PreparationCalendar({ profile }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [storageReady] = useState(initialCalendarState.storageReady);
   const [message, setMessage] = useState(initialCalendarState.message);
+
+  useEffect(() => {
+    onEventsChange?.(events);
+  }, [events, onEventsChange]);
+
+  useEffect(() => {
+    onIssueChange?.(message);
+  }, [message, onIssueChange]);
+
+  useEffect(() => {
+    if (!navigationRequest?.date) return;
+    setSelectedDate(navigationRequest.date);
+    setVisibleMonth(new Date(`${navigationRequest.date}T12:00:00`));
+  }, [navigationRequest]);
 
   const calendarDays = useMemo(() => {
     const firstOfMonth = new Date(
@@ -124,7 +97,7 @@ function PreparationCalendar({ profile }) {
 
   function saveEvents(nextEvents) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextEvents));
+      window.localStorage.setItem(PREPARATION_CALENDAR_STORAGE_KEY, JSON.stringify(nextEvents));
       setEvents(nextEvents);
       setMessage("");
       return true;

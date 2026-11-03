@@ -1,7 +1,12 @@
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
   faBars,
+  faBell,
+  faCalendarDay,
+  faCalendarDays,
+  faCircleCheck,
   faCircleUser,
   faMagnifyingGlass,
   faMoon,
@@ -9,6 +14,7 @@ import {
   faRightFromBracket,
   faShareNodes,
   faSun,
+  faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { palettes } from "../../../lib/workspaceConfig.js";
 
@@ -36,7 +42,11 @@ function WorkspaceHeader({
   onUpload,
   onReplaceFile,
   onNewNote,
+  notifications = [],
+  onOpenNotification,
 }) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationRef = useRef(null);
   const isEmployeeArea = activeArea === "employee";
   const pageTitle =
     activeArea === "company"
@@ -54,6 +64,24 @@ function WorkspaceHeader({
         : folderName ?? "All documents";
   const searchLabel =
     isEmployeeArea ? "Search notes and files" : "Search notes and files in employee workspace";
+
+  useEffect(() => {
+    if (!isNotificationsOpen) return undefined;
+    function closeOnOutsideClick(event) {
+      if (!notificationRef.current?.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
+    }
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setIsNotificationsOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isNotificationsOpen]);
 
   return (
     <>
@@ -86,6 +114,96 @@ function WorkspaceHeader({
           <FontAwesomeIcon icon={faShareNodes} />
           <span>Sharing</span>
         </button>}
+        <div className="notification-center" ref={notificationRef}>
+          <button
+            type="button"
+            className={`topbar-tool-button notification-trigger${isNotificationsOpen ? " is-open" : ""}`}
+            onClick={() => setIsNotificationsOpen((open) => !open)}
+            aria-label={`Notifications${notifications.length ? `, ${notifications.length} updates` : ""}`}
+            aria-expanded={isNotificationsOpen}
+            aria-haspopup="dialog"
+            title="Notifications"
+          >
+            <FontAwesomeIcon icon={faBell} />
+            <span>Notifications</span>
+            {notifications.length > 0 && (
+              <span className="notification-count" aria-hidden="true">
+                {notifications.length > 9 ? "9+" : notifications.length}
+              </span>
+            )}
+          </button>
+          {isNotificationsOpen && (
+            <section className="notification-panel" role="dialog" aria-label="Notifications">
+              <div className="notification-panel-heading">
+                <div>
+                  <strong>Notifications</strong>
+                  <span>
+                    {notifications.length
+                      ? `${notifications.length} upcoming ${notifications.length === 1 ? "event or issue" : "events or issues"}`
+                      : "You’re all caught up"}
+                  </span>
+                </div>
+                <span className="notification-heading-icon">
+                  <FontAwesomeIcon icon={faBell} />
+                </span>
+              </div>
+              {notifications.length ? (
+                <ul className="notification-list">
+                  {notifications.map((notification) => {
+                    const NotificationIcon = notification.kind === "event"
+                      ? faCalendarDay
+                      : faTriangleExclamation;
+                    const content = (
+                      <>
+                        <span className={`notification-icon is-${notification.kind}`}>
+                          <FontAwesomeIcon icon={NotificationIcon} />
+                        </span>
+                        <span className="notification-copy">
+                          <strong>{notification.title}</strong>
+                          <span>{notification.detail}</span>
+                        </span>
+                        <span className="notification-open-indicator" aria-hidden="true">›</span>
+                      </>
+                    );
+                    return (
+                      <li key={notification.id}>
+                        <button
+                          type="button"
+                          className="notification-item"
+                          onClick={() => {
+                            onOpenNotification?.(notification);
+                            setIsNotificationsOpen(false);
+                          }}
+                        >
+                          {content}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="notification-empty">
+                  <FontAwesomeIcon icon={faCircleCheck} />
+                  <p>No issues or events in the next 7 days.</p>
+                </div>
+              )}
+              <div className="notification-panel-footer">
+                <p className="notification-footnote">Reminders use this browser’s saved calendar.</p>
+                <button
+                  type="button"
+                  className="notification-calendar-link"
+                  onClick={() => {
+                    onOpenNotification?.({ targetArea: "calendar" });
+                    setIsNotificationsOpen(false);
+                  }}
+                >
+                  <FontAwesomeIcon icon={faCalendarDays} />
+                  <span>Open calendar</span>
+                </button>
+              </div>
+            </section>
+          )}
+        </div>
         <button
           type="button"
           className="topbar-tool-button"
