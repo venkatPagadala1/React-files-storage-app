@@ -1173,12 +1173,17 @@
   animation-name: vsr-edge-drift;
 }
 
+.company-hero,
+.company-stat-card,
 .company-panel,
+.calendar-intro-card,
 .calendar-month-panel,
 .calendar-agenda-panel,
+.profile-hero,
 .profile-edit-panel,
 .profile-learning-panel {
   position: relative;
+  isolation: isolate;
 }
 
 @supports ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
@@ -1192,7 +1197,7 @@
   .profile-edit-panel::before,
   .profile-learning-panel::before {
     position: absolute;
-    z-index: 1;
+    z-index: -1;
     inset: 0;
     padding: 2px;
     border-radius: inherit;
