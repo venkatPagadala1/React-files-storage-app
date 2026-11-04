@@ -77,7 +77,7 @@ app.use((request, response, next) => {
 });
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/healthz", (_request, response) => response.json({ status: "ok", mode: "local-emulator" }));
+app.get("/health", (_request, response) => response.json({ status: "ok", mode: "local-emulator" }));
 
 app.use("/api", async (request, response, next) => {
   const token = request.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];

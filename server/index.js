@@ -84,7 +84,7 @@ app.use((request, response, next) => {
 });
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/healthz", async (_request, response) => {
+app.get("/health", async (_request, response) => {
   try {
     await pool.query("SELECT 1");
     response.json({ status: "ok" });
