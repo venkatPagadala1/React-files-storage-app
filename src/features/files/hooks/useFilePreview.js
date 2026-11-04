@@ -4,7 +4,7 @@ import {
   highlightDocxText,
 } from "../../../lib/workspaceUtils.js";
 
-function useFilePreview({ activeItem, previewSearch, onError }) {
+function useFilePreview({ activeItem, previewSearch, onError, isFileViewerOpen }) {
   const [filePreviewUrl, setFilePreviewUrl] = useState("");
   const [fileDocumentText, setFileDocumentText] = useState("");
   const [isLoadingFileDocument, setIsLoadingFileDocument] = useState(false);
@@ -71,7 +71,7 @@ function useFilePreview({ activeItem, previewSearch, onError }) {
       cancelled = true;
       previewElement.replaceChildren();
     };
-  }, [activeItem, previewType]);
+  }, [activeItem, isFileViewerOpen, previewType]);
 
   useEffect(() => {
     if (
@@ -82,7 +82,7 @@ function useFilePreview({ activeItem, previewSearch, onError }) {
     ) {
       highlightDocxText(docxPreviewRef.current, previewSearch);
     }
-  }, [activeItem, isRenderingDocx, previewSearch, previewType]);
+  }, [activeItem, isFileViewerOpen, isRenderingDocx, previewSearch, previewType]);
 
   function createFilePreviewUrl(item) {
     const itemPreviewType = getFilePreviewType(item);

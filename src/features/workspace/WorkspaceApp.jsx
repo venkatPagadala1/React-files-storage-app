@@ -422,6 +422,7 @@ function WorkspaceApp() {
     activeItem,
     previewSearch,
     onError: setStatusMessage,
+    isFileViewerOpen,
   });
   const fileSearchMatchCount = countMatches(fileDocumentText, previewSearch);
   const isPreparationTrackerFocused =
@@ -1429,7 +1430,7 @@ function WorkspaceApp() {
 
   return (
     <main
-      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}${isFileViewerOpen && activeItem?.kind === "file" ? " is-file-viewer-open" : ""}`}
+      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}`}
       data-theme={theme}
       data-palette={palette}
       data-area={isBoardOpen ? "whiteboard" : activeArea}

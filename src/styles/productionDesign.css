@@ -120,70 +120,28 @@
   overscroll-behavior: contain;
 }
 
-.workspace-shell.is-file-viewer-open {
+.file-details.is-fullscreen {
   position: fixed;
-  z-index: 9999;
+  z-index: 10001;
   inset: 0;
-  width: 100%;
-  height: 100dvh;
-  min-height: 0;
-  grid-template-columns: minmax(0, 1fr);
-  overflow: hidden;
-  padding: 0;
+  display: flex;
+  align-items: stretch;
+  padding: 12px;
   background: #0a0e18;
 }
 
-.workspace-shell.is-file-viewer-open::before,
-.workspace-shell.is-file-viewer-open::after,
-.workspace-shell.is-file-viewer-open .workspace-sidebar,
-.workspace-shell.is-file-viewer-open .workspace-topbar,
-.workspace-shell.is-file-viewer-open .workspace-heading,
-.workspace-shell.is-file-viewer-open .workspace-status,
-.workspace-shell.is-file-viewer-open .workspace-alert,
-.workspace-shell.is-file-viewer-open .documents-panel,
-.workspace-shell.is-file-viewer-open .workspace-bottom-nav,
-.workspace-shell.is-file-viewer-open .assistant-launcher {
+.file-details.is-fullscreen > :not(.file-viewer-stage) {
   display: none !important;
 }
 
-.workspace-shell.is-file-viewer-open .workspace-main,
-.workspace-shell.is-file-viewer-open .workspace-content,
-.workspace-shell.is-file-viewer-open .workspace-grid,
-.workspace-shell.is-file-viewer-open .editor-panel,
-.workspace-shell.is-file-viewer-open .file-details {
+.file-details.is-fullscreen .file-viewer-stage.expanded {
+  position: relative;
+  inset: auto;
   width: 100%;
   height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
-  max-width: none;
   margin: 0;
-  overflow: hidden;
-}
-
-.workspace-shell.is-file-viewer-open .workspace-content,
-.workspace-shell.is-file-viewer-open .editor-panel {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.workspace-shell.is-file-viewer-open .workspace-grid {
-  display: block;
-}
-
-.workspace-shell.is-file-viewer-open .file-details {
-  display: block;
-}
-
-.workspace-shell.is-file-viewer-open .file-details > :not(.file-viewer-stage) {
-  display: none;
-}
-
-.workspace-shell.is-file-viewer-open .file-viewer-stage.expanded {
-  z-index: 10000;
-  inset: 12px;
-  box-shadow: 0 24px 90px rgb(5 10 20 / 40%);
 }
 
 .folder-document-link {

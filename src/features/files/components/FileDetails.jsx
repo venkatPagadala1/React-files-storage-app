@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowDown,
@@ -58,8 +59,8 @@ function FileDetails({
 }) {
   const isFullViewLabel = isFileViewerOpen ? "Close" : "Full view";
 
-  return (
-    <div className="file-details">
+  const fileDetails = (
+    <div className={`file-details${isFileViewerOpen ? " is-fullscreen" : ""}`}>
       <div className="editor-topline">
         <span className="editor-type">
           <FontAwesomeIcon icon={faArrowUpFromBracket} />
@@ -331,6 +332,11 @@ function FileDetails({
       )}
     </div>
   );
+
+  const workspaceShell = document.querySelector(".workspace-shell");
+  return isFileViewerOpen && workspaceShell
+    ? createPortal(fileDetails, workspaceShell)
+    : fileDetails;
 }
 
 export default FileDetails;
