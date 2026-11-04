@@ -543,13 +543,24 @@ function WorkspaceApp() {
     const requestId = ++selectRequestRef.current;
     let itemToOpen = item;
     if (item.kind === "file" && isFirebaseAuthEnabled && !(item.blob instanceof Blob)) {
-      try {
-        const blob = await apiFileBlob(item.id);
-        if (requestId !== selectRequestRef.current) return;
-        itemToOpen = { ...item, blob };
-      } catch (error) {
-        setStatusMessage(`Could not open "${item.title}": ${error.message}`);
-        return;
+      if (item.hasFile !== false) {
+        try {
+          const blob = await apiFileBlob(item.id);
+          if (requestId !== selectRequestRef.current) return;
+          itemToOpen = { ...item, blob };
+        } catch (error) {
+          if (requestId !== selectRequestRef.current) return;
+          if (error.status !== 404 || error.message !== "File content is missing.") {
+            setStatusMessage(`Could not open "${item.title}": ${error.message}`);
+            return;
+          }
+          itemToOpen = { ...item, hasFile: false };
+        }
+      }
+      if (itemToOpen.hasFile === false) {
+        setStatusMessage(
+          `The content for "${item.title}" is missing. Replace it with the original file to view or download it.`,
+        );
       }
     }
     setActiveArea("employee");
@@ -1087,6 +1098,7 @@ function WorkspaceApp() {
       ...activeItem,
       title: file.name,
       blob: file,
+      hasFile: true,
       mimeType: file.type || "application/octet-stream",
       size: file.size,
       updatedAt: now,
@@ -1688,6 +1700,7 @@ function WorkspaceApp() {
                     isRenderingDocx={isRenderingDocx}
                     isFileViewerOpen={isFileViewerOpen}
                     docxPreviewRef={docxPreviewRef}
+                    onReplaceMissingFile={() => replaceFileInputRef.current?.click()}
                     onDelete={() => handleDeleteItem()}
                     onEdit={handleEditFile}
                     onSaveEditedCopy={() => replaceFileInputRef.current?.click()}

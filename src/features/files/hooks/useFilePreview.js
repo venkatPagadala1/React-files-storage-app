@@ -27,7 +27,12 @@ function useFilePreview({ activeItem, previewSearch, onError }) {
 
   useEffect(() => {
     const previewElement = docxPreviewRef.current;
-    if (!previewElement || activeItem?.kind !== "file" || previewType !== "docx") {
+    if (
+      !previewElement ||
+      activeItem?.kind !== "file" ||
+      activeItem.hasFile === false ||
+      previewType !== "docx"
+    ) {
       setIsRenderingDocx(false);
       return undefined;
     }
@@ -83,6 +88,7 @@ function useFilePreview({ activeItem, previewSearch, onError }) {
     const itemPreviewType = getFilePreviewType(item);
     if (
       item.kind !== "file" ||
+      item.hasFile === false ||
       ["unsupported", "text", "docx"].includes(itemPreviewType)
     ) {
       return "";
@@ -101,9 +107,10 @@ function useFilePreview({ activeItem, previewSearch, onError }) {
     const itemPreviewType = getFilePreviewType(item);
     setFileDocumentText("");
     setIsLoadingFileDocument(
-      itemPreviewType === "text" || itemPreviewType === "docx",
+      item.hasFile !== false &&
+        (itemPreviewType === "text" || itemPreviewType === "docx"),
     );
-    if (!["text", "docx"].includes(itemPreviewType)) return;
+    if (item.hasFile === false || !["text", "docx"].includes(itemPreviewType)) return;
 
     try {
       if (!(item.blob instanceof Blob)) {

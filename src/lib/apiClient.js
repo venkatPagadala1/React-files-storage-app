@@ -31,7 +31,9 @@ export async function apiRequest(path, { body, headers = {}, ...options } = {}) 
     } catch {
       // Keep the status-based message when the API response isn't JSON.
     }
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;

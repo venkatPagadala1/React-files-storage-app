@@ -42,6 +42,7 @@ function FileDetails({
   isRenderingDocx,
   isFileViewerOpen,
   docxPreviewRef,
+  onReplaceMissingFile,
   onDelete,
   onEdit,
   onSaveEditedCopy,
@@ -179,7 +180,10 @@ function FileDetails({
                 type="button"
                 className="file-viewer-reset"
                 onClick={onEdit}
-                disabled={previewType === "text" && isLoadingFileDocument}
+                disabled={
+                  item.hasFile === false ||
+                  (previewType === "text" && isLoadingFileDocument)
+                }
                 title={
                   previewType === "text"
                     ? "Edit this text file in the workspace"
@@ -221,7 +225,7 @@ function FileDetails({
               </button>
             </div>
           </div>
-          {previewType !== "text" && (
+          {item.hasFile !== false && previewType !== "text" && (
             <div className="file-viewer-edit-status" role="note">
               {isExternalEditActive
                 ? "Edit the downloaded copy in a compatible app, then choose Save edited copy to update this item in place."
@@ -229,12 +233,27 @@ function FileDetails({
             </div>
           )}
           <div className="file-viewer-content">
-            {previewType === "unsupported" && (
+            {item.hasFile === false ? (
+              <div className="file-preview-unavailable" role="alert">
+                <p>
+                  This file is listed in your workspace, but its contents are missing
+                  from storage. Choose the original file to upload it again.
+                </p>
+                <button
+                  type="button"
+                  className="save-note-button"
+                  onClick={onReplaceMissingFile}
+                >
+                  <FontAwesomeIcon icon={faArrowUpFromBracket} />
+                  <span>Replace missing file</span>
+                </button>
+              </div>
+            ) : previewType === "unsupported" ? (
               <div className="file-preview-unavailable">
                 Preview is not available for this file type. Download it to open it
                 with a compatible app.
               </div>
-            )}
+            ) : null}
             {previewUrl && previewType === "image" && (
               <div className="file-preview-frame image-preview">
                 <img
@@ -300,7 +319,7 @@ function FileDetails({
           ? `${Math.max(1, Math.round(item.size / 1024))} KB`
           : `${(item.size / (1024 * 1024)).toFixed(1)} MB`}
       </span>
-      {!isEditing && (
+      {!isEditing && item.hasFile !== false && (
         <button
           type="button"
           className="save-note-button download-file-button"

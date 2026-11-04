@@ -33,13 +33,13 @@ The frontend is a Vite static site on Firebase Hosting. The Node API runs on Clo
 ### 2. Create Neon PostgreSQL and file storage
 
 1. Create a Neon project in Singapore and copy the pooled PostgreSQL connection string. Use the string with its TLS requirement (`sslmode=require`).
-2. Create a private Object Storage bucket and record its endpoint, region, bucket name, access key, and secret key. These values are server secrets; never put them in a `VITE_` variable.
+2. Create a private Object Storage bucket. In Neon, use the bucket's branch endpoint and region, and create a credential for that branch (or an ancestor) with both `storage:read` and `storage:write` scopes. For S3 credentials, use `token_id` as the access key ID and `s3_secret_access_key` as the secret access key; do not use `token_id_short` or `api_token`. These values are server secrets; never put them in a `VITE_` variable.
 3. Neon currently includes 1 GB of PostgreSQL storage, 100 compute hours per project per month, and 5 GB of Object Storage on its free plan. Monitor those limits and keep an independent export of data you need to retain.
 
 ### 3. Configure the frontend and API
 
 1. Copy `.env.example` to `.env.production.local`. Fill in the public Firebase Web App values and the Cloud Run API URL. These Firebase web configuration values are public; do not put database or storage credentials here.
-2. Create Secret Manager secrets named `neon-database-url`, `neon-object-access-key-id`, and `neon-object-secret-access-key`, and add their values. Use the database URL and object credentials from Neon.
+2. Create Secret Manager secrets named `neon-database-url`, `neon-object-access-key-id`, and `neon-object-secret-access-key`, and add their values. Use the database URL and correctly scoped object credentials from Neon.
 3. Grant the Cloud Run runtime service account `Secret Manager Secret Accessor` on those three secrets. Cloud Run uses its service identity for Firebase Admin authentication; do not upload a service-account key.
 4. Deploy the API from the `server` directory, setting `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` (the Hosting domain plus local development origin), `OBJECT_STORAGE_ENDPOINT`, `OBJECT_STORAGE_BUCKET`, and `OBJECT_STORAGE_REGION`. Map `DATABASE_URL`, `OBJECT_STORAGE_ACCESS_KEY_ID`, and `OBJECT_STORAGE_SECRET_ACCESS_KEY` to the Secret Manager secrets. Use region `asia-south1`, minimum instances `0`, and a low maximum instance count such as `2`.
 
@@ -57,6 +57,8 @@ gcloud run deploy vsr-workspace-api \
 ```
 
 4. Copy the returned Cloud Run URL into `VITE_API_BASE_URL` in `.env.production.local`. The API allows uploads up to 25 MB per file.
+
+If file downloads fail with `403 AccessDenied`, create a fresh Neon credential with `storage:read` and `storage:write` on the branch used by `OBJECT_STORAGE_ENDPOINT` (or one of its ancestors), add its `token_id` and `s3_secret_access_key` as new Secret Manager versions, and redeploy the API. Confirm that `OBJECT_STORAGE_ENDPOINT` and `OBJECT_STORAGE_REGION` match that branch's storage endpoint and region. Neon credentials are branch-scoped, and a credential from an unrelated branch cannot read the bucket.
 
 ### 4. Build and deploy the frontend
 
