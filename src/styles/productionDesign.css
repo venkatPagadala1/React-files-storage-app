@@ -1097,7 +1097,7 @@
 .workspace-shell::after,
 .welcome-page::after {
   position: absolute;
-  z-index: 10000;
+  z-index: 0;
   inset: 4px;
   border: 5px solid var(--edge-mid);
   border-radius: 26px;
