@@ -69,6 +69,8 @@ await pool.query(schemaSql);
 
 app.disable("x-powered-by");
 app.use((request, response, next) => {
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Referrer-Policy", "no-referrer");
   const origin = request.get("origin");
   if (origin && allowedOrigins.has(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
@@ -104,6 +106,53 @@ async function requireFirebaseUser(request, response, next) {
 }
 
 app.use("/api", requireFirebaseUser);
+app.use("/api", (_request, response, next) => {
+  response.setHeader("Cache-Control", "private, no-store");
+  next();
+});
+
+const accountDataKeys = new Set(["profile", "calendar", "whiteboard"]);
+
+app.get("/api/account-data/:key", async (request, response, next) => {
+  try {
+    if (!accountDataKeys.has(request.params.key)) {
+      return response.status(404).json({ error: "Account data was not found." });
+    }
+    const result = await pool.query(
+      "SELECT data FROM account_data WHERE owner_uid = $1 AND data_key = $2",
+      [request.ownerUid, request.params.key],
+    );
+    response.json({ data: result.rows[0]?.data ?? null });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/account-data/:key", async (request, response, next) => {
+  try {
+    if (!accountDataKeys.has(request.params.key)) {
+      return response.status(404).json({ error: "Account data was not found." });
+    }
+    const data = request.body?.data;
+    if (data === null || typeof data !== "object" || Array.isArray(data)) {
+      return response.status(400).json({ error: "Account data must be a JSON object." });
+    }
+    const serialized = JSON.stringify(data);
+    if (Buffer.byteLength(serialized, "utf8") > 5 * 1024 * 1024) {
+      return response.status(413).json({ error: "Account data exceeds the 5 MB limit." });
+    }
+    await pool.query(
+      `INSERT INTO account_data (owner_uid, data_key, data, updated_at)
+       VALUES ($1, $2, $3::jsonb, NOW())
+       ON CONFLICT (owner_uid, data_key) DO UPDATE SET
+         data = EXCLUDED.data, updated_at = NOW()`,
+      [request.ownerUid, request.params.key, serialized],
+    );
+    response.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
 
 function mapFolder(row) {
   return {
@@ -386,7 +435,7 @@ app.get("/api/items/:id/file", async (request, response, next) => {
       new GetObjectCommand({ Bucket: process.env.OBJECT_STORAGE_BUCKET, Key: file.storage_key }),
     );
     response.setHeader("Content-Type", file.mime_type || "application/octet-stream");
-    response.setHeader("Content-Disposition", "inline");
+    response.setHeader("Content-Disposition", "attachment");
     response.setHeader("Cache-Control", "private, no-store");
     object.Body.pipe(response);
   } catch (error) {

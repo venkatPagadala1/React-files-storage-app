@@ -12,6 +12,12 @@ const defaultFolders = [
 
 let databasePromise;
 
+function requireCloudWorkspace() {
+  if (!isFirebaseAuthEnabled) {
+    throw new Error("Firebase Authentication must be configured before workspace data is available.");
+  }
+}
+
 function openDatabase() {
   if (!("indexedDB" in window)) {
     return Promise.reject(new Error("This browser does not support local file storage."));
@@ -110,11 +116,12 @@ export async function initializeLocalWorkspace() {
 }
 
 export async function initializeWorkspace() {
-  if (isFirebaseAuthEnabled) return apiJson("/api/workspace");
-  return initializeLocalWorkspace();
+  requireCloudWorkspace();
+  return apiJson("/api/workspace");
 }
 
 export async function saveFolder(folder) {
+  requireCloudWorkspace();
   if (isFirebaseAuthEnabled) {
     await apiJson("/api/folders", { method: "POST", body: folder });
     return;
@@ -127,6 +134,7 @@ export async function saveFolder(folder) {
 }
 
 export async function saveFolders(folders) {
+  requireCloudWorkspace();
   if (isFirebaseAuthEnabled) {
     await apiJson("/api/folders/bulk", { method: "PUT", body: { folders } });
     return;
@@ -140,6 +148,7 @@ export async function saveFolders(folders) {
 }
 
 export async function saveItem(item) {
+  requireCloudWorkspace();
   if (isFirebaseAuthEnabled) {
     const { blob, ...document } = item;
     await apiJson("/api/items", { method: "PUT", body: document });
@@ -156,6 +165,7 @@ export async function saveItem(item) {
 }
 
 export async function deleteItem(itemId) {
+  requireCloudWorkspace();
   if (isFirebaseAuthEnabled) {
     await apiJson(`/api/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
     return;
@@ -168,6 +178,7 @@ export async function deleteItem(itemId) {
 }
 
 export async function deleteFolderAndItems(folderId) {
+  requireCloudWorkspace();
   if (isFirebaseAuthEnabled) {
     const ids = Array.isArray(folderId) ? folderId : [folderId];
     await apiJson("/api/folders", { method: "DELETE", body: { ids } });
@@ -203,8 +214,10 @@ export async function deleteFolderAndItems(folderId) {
   await Promise.all([...deleteRequests, completion]);
 }
 import { apiJson, uploadItemFile } from "./apiClient.js";
+import { saveAccountData } from "./accountStorage.js";
+import { readPreparationCalendar } from "./calendarStorage.js";
 import { isFirebaseAuthEnabled } from "./firebaseClient.js";
-export async function importLegacyWorkspace({ folders, items, tasks }) {
+export async function importLegacyWorkspace({ folders, items, tasks, legacyBrowserData = {} }) {
   await apiJson("/api/migrations/import", {
     method: "POST",
     body: {
@@ -230,8 +243,45 @@ export async function importLegacyWorkspace({ folders, items, tasks }) {
     }
   }
 
+  if (legacyBrowserData.profile) {
+    const profile = { ...legacyBrowserData.profile };
+    delete profile.email;
+    await saveAccountData("profile", profile);
+  }
+  if (legacyBrowserData.calendar) {
+    await saveAccountData("calendar", legacyBrowserData.calendar);
+  }
+  if (legacyBrowserData.whiteboard) {
+    await saveAccountData("whiteboard", legacyBrowserData.whiteboard);
+  }
+
   await apiJson("/api/migrations/complete", { method: "POST", body: {} });
   return apiJson("/api/workspace");
+}
+
+export function readLegacyBrowserData() {
+  let profile = null;
+  let whiteboard = null;
+  try {
+    const savedProfile = window.localStorage.getItem("vsr-demo-profile-v1");
+    if (savedProfile) {
+      const parsed = JSON.parse(savedProfile);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) profile = parsed;
+    }
+    const savedBoard = window.localStorage.getItem("vsr-workspace-whiteboard-v1");
+    if (savedBoard) {
+      const parsed = JSON.parse(savedBoard);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.objects)) whiteboard = parsed;
+    }
+  } catch (error) {
+    console.warn("Some previous browser data could not be read for import.", error);
+  }
+  const calendarResult = readPreparationCalendar();
+  return {
+    profile,
+    calendar: calendarResult.error || !calendarResult.events.length ? null : { events: calendarResult.events },
+    whiteboard,
+  };
 }
 
 export async function completeLegacyImport() {

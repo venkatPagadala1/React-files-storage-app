@@ -12,7 +12,6 @@ import {
   faMoon,
   faPlus,
   faRightFromBracket,
-  faShareNodes,
   faSun,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
@@ -29,12 +28,10 @@ function WorkspaceHeader({
   visibleItemCount,
   isLoading,
   canUpload,
-  canShare,
   fileInputRef,
   replaceFileInputRef,
   onSearchChange,
   onOpenSidebar,
-  onOpenSharing,
   onThemeChange,
   onPaletteChange,
   onOpenSignout,
@@ -43,27 +40,28 @@ function WorkspaceHeader({
   onReplaceFile,
   onNewNote,
   notifications = [],
+  browserNotificationPermission = "unsupported",
+  areBrowserRemindersEnabled = false,
+  onToggleBrowserReminders,
   onOpenNotification,
 }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationRef = useRef(null);
   const isEmployeeArea = activeArea === "employee";
-  const pageTitle =
-    activeArea === "company"
-      ? "Company overview"
-      : activeArea === "company-resources"
-        ? "Company resources"
-        : activeArea === "team-admin"
-          ? "Manage team & roles"
-            : activeArea === "calendar"
-              ? "Preparation calendar"
-              : activeArea === "profile"
-                ? "My profile"
-        : activeArea === "training"
-        ? "Training & learning"
-        : activeArea === "sticky-notes"
-        ? "Sticky notes"
-        : folderName ?? "All documents";
+  const pageTitle = {
+    company: "Your workspace",
+    calendar: "Preparation calendar",
+    profile: "My profile",
+    training: "Learning notes",
+    "sticky-notes": "Sticky notes",
+  }[activeArea] ?? folderName ?? "All documents";
+  const pageDescription = {
+    company: "Your private workspace, organized in one place.",
+    calendar: "Plan study sessions, training, and preparation milestones.",
+    profile: "Manage your account profile.",
+    training: "Prepare, learn, and capture your next steps.",
+    "sticky-notes": "Capture quick tasks and check them off as you go.",
+  }[activeArea] ?? "Keep your documents and preparation organized.";
   const searchLabel =
     isEmployeeArea ? "Search notes and files" : "Search notes and files in employee workspace";
 
@@ -108,14 +106,6 @@ function WorkspaceHeader({
           />
           <kbd>Ctrl / ⌘ K</kbd>
         </label>
-        {canShare && <button
-          type="button"
-          className="share-button"
-          onClick={onOpenSharing}
-        >
-          <FontAwesomeIcon icon={faShareNodes} />
-          <span>Sharing</span>
-        </button>}
         <div className="notification-center" ref={notificationRef}>
           <button
             type="button"
@@ -190,7 +180,27 @@ function WorkspaceHeader({
                 </div>
               )}
               <div className="notification-panel-footer">
-                <p className="notification-footnote">Reminders use this browser’s saved calendar.</p>
+                <div className="notification-reminder-setting">
+                  <p className="notification-footnote">
+                    {browserNotificationPermission === "unsupported"
+                      ? "This browser does not support desktop alerts."
+                      : browserNotificationPermission === "denied"
+                        ? "Desktop alerts are blocked in browser settings."
+                        : areBrowserRemindersEnabled
+                          ? "Event alerts are on. You’ll be reminded 10 minutes before an event while the app is open."
+                          : "Turn on desktop alerts for a reminder 10 minutes before each event."}
+                  </p>
+                  {browserNotificationPermission !== "unsupported" && browserNotificationPermission !== "denied" && (
+                    <button
+                      type="button"
+                      className="notification-reminder-toggle"
+                      onClick={onToggleBrowserReminders}
+                    >
+                      {areBrowserRemindersEnabled ? "Turn off" : "Enable alerts"}
+                    </button>
+                  )}
+                </div>
+                <p className="notification-footnote">Reminders use your account calendar.</p>
                 <button
                   type="button"
                   className="notification-calendar-link"
@@ -258,26 +268,12 @@ function WorkspaceHeader({
 
       <div className="workspace-heading">
         <div>
-          <span className="workspace-overline">VSR GROUP OF COMPANIES · PROTOTYPE</span>
+          <span className="workspace-overline">VSR WORKSPACE</span>
           <h1>{isEmployeeArea && searchQuery ? "Search results" : pageTitle}</h1>
           <p>
             {isEmployeeArea && searchQuery
               ? `${visibleItemCount} matching item${visibleItemCount === 1 ? "" : "s"}`
-              : activeArea === "company"
-                ? "Company information and shared work, together."
-                : activeArea === "company-resources"
-                  ? "Policies, guides, and onboarding resources."
-                  : activeArea === "team-admin"
-                    ? "Admin-only controls shown with sample data."
-                    : activeArea === "calendar"
-                      ? "Plan study sessions, training, and preparation milestones."
-                      : activeArea === "profile"
-                        ? "Manage the demo identity shown on your learning comments."
-                : activeArea === "training"
-                  ? "Prepare, learn, and capture your next steps."
-                  : activeArea === "sticky-notes"
-                    ? "Capture quick tasks and check them off as you go."
-                  : "Keep your documents and preparation organized."}
+              : pageDescription}
           </p>
         </div>
         {isEmployeeArea && <div className="workspace-actions">

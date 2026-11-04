@@ -23,38 +23,20 @@ export function readLocalTasks() {
 }
 
 export async function loadTasks() {
-  if (isFirebaseAuthEnabled) {
-    const payload = await apiJson("/api/tasks");
-    return payload.tasks;
-  }
-  return readLocalTasks();
+  if (!isFirebaseAuthEnabled) throw new Error("Firebase Authentication must be configured before tasks are available.");
+  const payload = await apiJson("/api/tasks");
+  return payload.tasks;
 }
 
 export async function saveTask(task) {
-  if (isFirebaseAuthEnabled) {
-    await apiJson(`/api/tasks/${encodeURIComponent(task.id)}`, {
-      method: "PUT",
-      body: task,
-    });
-    return;
-  }
-
-  const tasks = readLocalTasks();
-  const taskIndex = tasks.findIndex((candidate) => candidate.id === task.id);
-  const nextTasks = taskIndex < 0
-    ? [task, ...tasks]
-    : tasks.map((candidate, index) => index === taskIndex ? task : candidate);
-  window.localStorage.setItem(STICKY_TASKS_STORAGE_KEY, JSON.stringify(nextTasks));
+  if (!isFirebaseAuthEnabled) throw new Error("Firebase Authentication must be configured before tasks are available.");
+  await apiJson(`/api/tasks/${encodeURIComponent(task.id)}`, {
+    method: "PUT",
+    body: task,
+  });
 }
 
 export async function deleteTask(taskId) {
-  if (isFirebaseAuthEnabled) {
-    await apiJson(`/api/tasks/${encodeURIComponent(taskId)}`, { method: "DELETE" });
-    return;
-  }
-
-  window.localStorage.setItem(
-    STICKY_TASKS_STORAGE_KEY,
-    JSON.stringify(readLocalTasks().filter((task) => task.id !== taskId)),
-  );
+  if (!isFirebaseAuthEnabled) throw new Error("Firebase Authentication must be configured before tasks are available.");
+  await apiJson(`/api/tasks/${encodeURIComponent(taskId)}`, { method: "DELETE" });
 }

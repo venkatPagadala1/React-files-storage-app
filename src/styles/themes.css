@@ -192,16 +192,6 @@
   color: #c4bbff;
 }
 
-.workspace-shell[data-theme="dark"] .workspace-security-notice {
-  border-color: #59462d;
-  background: #332b20;
-  color: #e1c99f;
-}
-
-.workspace-shell[data-theme="dark"] .workspace-security-notice strong {
-  color: #f0ce8c;
-}
-
 .workspace-shell[data-theme="dark"] .file-size,
 .workspace-shell[data-theme="dark"] .workspace-search kbd {
   border-color: #3a4052;
@@ -614,27 +604,6 @@
   box-shadow: 0 6px 15px color-mix(in srgb, var(--welcome-accent) 22%, transparent);
 }
 
-.welcome-demo-notice {
-  margin-top: 15px;
-  padding: 10px 11px;
-  display: grid;
-  gap: 4px;
-  border: 1px solid #d5ebe4;
-  border-radius: 9px;
-  background: #f3faf7;
-}
-
-.welcome-demo-notice strong {
-  color: #0d655f;
-  font-size: 0.68rem;
-}
-
-.welcome-demo-notice span {
-  color: #747b8e;
-  font-size: 0.65rem;
-  line-height: 1.5;
-}
-
 .welcome-open-workspace {
   margin-top: 10px;
   border: 1px solid #e0e3ed;
@@ -814,19 +783,6 @@
   color: #b6bdcc;
 }
 
-.welcome-page[data-theme="dark"] .welcome-demo-notice {
-  border-color: color-mix(in srgb, var(--palette-primary-dark) 22%, #191d29);
-  background: var(--palette-soft-dark);
-}
-
-.welcome-page[data-theme="dark"] .welcome-demo-notice strong {
-  color: var(--palette-primary-dark);
-}
-
-.welcome-page[data-theme="dark"] .welcome-demo-notice span {
-  color: #a6aec0;
-}
-
 .welcome-page[data-theme="dark"] .welcome-open-workspace {
   border-color: #3a4052;
   background: #202432;
@@ -980,12 +936,6 @@
   box-shadow: 0 6px 15px color-mix(in srgb, var(--palette-primary) 22%, transparent);
 }
 
-.welcome-page[data-palette] .welcome-demo-notice {
-  border-color: color-mix(in srgb, var(--palette-primary) 24%, white);
-  background: color-mix(in srgb, var(--palette-soft-light) 60%, white);
-}
-
-.welcome-page[data-palette] .welcome-demo-notice strong,
 .welcome-page[data-palette] .welcome-open-workspace:hover,
 .welcome-page[data-palette] .welcome-theme-toggle:hover {
   color: var(--palette-primary);
@@ -997,12 +947,6 @@
   background: color-mix(in srgb, var(--palette-soft-light) 70%, white);
 }
 
-.welcome-page[data-theme="dark"][data-palette] .welcome-demo-notice {
-  border-color: color-mix(in srgb, var(--palette-primary) 30%, #191d29);
-  background: var(--palette-soft);
-}
-
-.welcome-page[data-theme="dark"][data-palette] .welcome-demo-notice strong,
 .welcome-page[data-theme="dark"][data-palette] .welcome-theme-toggle:hover {
   color: var(--palette-primary);
 }

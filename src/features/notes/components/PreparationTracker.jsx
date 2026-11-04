@@ -74,8 +74,8 @@ function PreparationTracker({
       strokes.filter(
         (stroke) =>
           !stroke.points?.some(
-            (sample) =>
-              Math.hypot(sample.x - point.x, sample.y - point.y) <
+            (candidatePoint) =>
+              Math.hypot(candidatePoint.x - point.x, candidatePoint.y - point.y) <
               tolerance + (stroke.width ?? 0),
           ),
       ),

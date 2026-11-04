@@ -48,28 +48,6 @@
   font-size: 0.78rem;
 }
 
-.role-preview-control {
-  margin: 0 2px 6px;
-  padding: 12px;
-  gap: 9px;
-  border-color: var(--workspace-border);
-  border-radius: var(--ui-radius-sm);
-  background: color-mix(in srgb, var(--workspace-accent-soft) 42%, var(--ui-surface));
-}
-
-.role-preview-control > span {
-  font-size: 0.78rem;
-}
-
-.role-preview-control small {
-  font-size: 0.68rem;
-}
-
-.role-preview-control select {
-  min-height: 38px;
-  font-size: 0.82rem;
-}
-
 .workspace-area-navigation {
   max-height: min(44vh, 470px);
   overflow: auto;
@@ -358,7 +336,6 @@
   color: var(--workspace-ink);
 }
 
-.workspace-security-notice,
 .workspace-alert,
 .workspace-status {
   font-size: 0.86rem;
@@ -465,11 +442,6 @@
   line-height: 1.65;
 }
 
-.company-prototype-banner {
-  padding: 15px 18px;
-  font-size: 0.84rem;
-}
-
 .company-stat-grid {
   gap: 16px;
 }
@@ -546,8 +518,7 @@
 }
 
 .company-resource-list li,
-.company-people-list li,
-.team-admin-list li {
+.company-people-list li {
   padding-block: 14px;
   gap: 12px;
 }
@@ -574,11 +545,6 @@
 
 .company-person-status {
   font-size: 0.76rem;
-}
-
-.team-admin-list select {
-  min-height: 38px;
-  font-size: 0.82rem;
 }
 
 .learning-path-toggle {
@@ -1357,8 +1323,7 @@
   font-size: 0.78rem;
 }
 
-.company-person-status,
-.team-admin-list select {
+.company-person-status {
   font-size: 0.78rem;
 }
 

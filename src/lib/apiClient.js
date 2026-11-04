@@ -3,6 +3,7 @@ import { firebaseAuth } from "./firebaseClient.js";
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 export async function apiRequest(path, { body, headers = {}, ...options } = {}) {
+  if (!apiBaseUrl) throw new Error("The workspace API URL is not configured.");
   const user = firebaseAuth?.currentUser;
   if (!user) throw new Error("Sign in before accessing the cloud workspace.");
 
@@ -39,7 +40,7 @@ export async function apiRequest(path, { body, headers = {}, ...options } = {}) 
 
 export async function apiJson(path, options) {
   const response = await apiRequest(path, options);
-  return response.json();
+  return response ? response.json() : null;
 }
 
 export async function apiFileBlob(itemId) {

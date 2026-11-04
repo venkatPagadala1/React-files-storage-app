@@ -10,7 +10,6 @@ import {
   faFolder,
   faFolderPlus,
   faNoteSticky,
-  faUserShield,
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -203,7 +202,6 @@ function WorkspaceSidebar({
   folderCounts,
   selectedFolderId,
   activeArea,
-  previewRole,
   roleFeatures,
   isBoardOpen,
   selectedItemId,
@@ -216,7 +214,6 @@ function WorkspaceSidebar({
   onClose,
   onSelectFolder,
   onNavigateArea,
-  onPreviewRoleChange,
   onOpenBoard,
   onSelectItem,
   onCreateFolder,
@@ -260,24 +257,11 @@ function WorkspaceSidebar({
         </button>
       </div>
 
-      <label className="role-preview-control">
-        <span>Preview role <small>visual only</small></span>
-        <select
-          value={previewRole}
-          onChange={(event) => onPreviewRoleChange(event.target.value)}
-          aria-label="Preview workspace role"
-        >
-          <option value="Admin">Admin</option>
-          <option value="Manager">Manager</option>
-          <option value="Employee">Employee</option>
-        </select>
-      </label>
-
       <nav className="workspace-area-navigation" aria-label="Workspace areas">
-        {(canView("company") || canView("company-resources")) && (
+        {canView("company") && (
           <section className="workspace-nav-group" aria-label="Company">
             <h2 className="workspace-nav-group-title">Company</h2>
-            {canView("company") && <button
+            <button
               type="button"
               className={`sidebar-link ${activeArea === "company" && !isBoardOpen ? "active" : ""}`}
               onClick={() => onNavigateArea("company")}
@@ -285,16 +269,7 @@ function WorkspaceSidebar({
             >
               <FontAwesomeIcon icon={faBuilding} />
               <span>Overview</span>
-            </button>}
-            {canView("company-resources") && <button
-              type="button"
-              className={`sidebar-link ${activeArea === "company-resources" && !isBoardOpen ? "active" : ""}`}
-              onClick={() => onNavigateArea("company-resources")}
-              aria-current={activeArea === "company-resources" ? "page" : undefined}
-            >
-              <FontAwesomeIcon icon={faFolder} />
-              <span>Resources</span>
-            </button>}
+            </button>
           </section>
         )}
 
@@ -365,20 +340,6 @@ function WorkspaceSidebar({
           </section>
         )}
 
-        {canView("manage-team") && (
-          <section className="workspace-nav-group" aria-label="Administration">
-            <h2 className="workspace-nav-group-title">Administration</h2>
-            <button
-              type="button"
-              className={`sidebar-link ${activeArea === "team-admin" && !isBoardOpen ? "active" : ""}`}
-              onClick={() => onNavigateArea("team-admin")}
-              aria-current={activeArea === "team-admin" ? "page" : undefined}
-            >
-              <FontAwesomeIcon icon={faUserShield} />
-              <span>Team & roles</span>
-            </button>
-          </section>
-        )}
       </nav>
 
       {canView("employee") && (

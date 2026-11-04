@@ -1,18 +1,23 @@
 # VSR Group of Companies Workspace
 
-A React and Vite UI prototype for a shared company overview and employee preparation workspace. Its responsive interface uses grouped, role-aware navigation, a consistent typography and spacing system, and rounded palette-aware animated gradient frames with subtle depth. The outer landing and workspace borders have a multicolor gradient and a bright moving highlight that travels around the frame continuously and responds to page scroll, while prominent cards respond to their own scroll position. Edge animations respect the operating system's reduced-motion preference. The prototype includes a dimensional V/R brand mark, sample company-resource and training views with expandable learning paths and locally saved course links (including full-view details and edit/save controls), a visual-only role preview, employee documents and notes, a preparation calendar with event comments, a local demo profile with an optional profile photo, preparation boards, and an interactive whiteboard with drawing and shape tools, image placement, object layers, undo/redo, and SVG/PNG export.
+A React and Vite workspace with Firebase Authentication, a UID-scoped Node API on Cloud Run, Neon PostgreSQL, and private object storage. Folders, notes, uploaded files, tasks, profile details, calendar events, and whiteboards are stored for the signed-in account. The interface includes document management, learning notes, a preparation calendar, profile settings, sticky tasks, and a whiteboard.
 
 ## Development
 
-- `npm run dev` starts the local development server.
+- For a local sign-in walkthrough before creating a Firebase project, install a JDK (11 or newer), copy `.env.local.example` to `.env.local`, then open three terminals in the repository:
+  1. `npm run dev:auth-emulator` starts Firebase Authentication Emulator with the fake project `demo-vsr-workspace`.
+  2. `npm run dev:local-api` starts an in-memory API that accepts only emulator ID tokens and keeps users isolated by UID.
+  3. `npm run dev` starts Vite. Sign up with any test email and password.
+- Emulator accounts and workspace data are temporary and are cleared when the emulator/API processes stop. This local setup cannot connect to production Firebase or Cloud Run and must not be deployed.
+- For the real deployment, use `.env.example` as the template for `.env.production.local`, enter the Firebase Web App values and deployed Cloud Run URL, enable **Email/Password** in Firebase Console, then rebuild and deploy Hosting. Never use `.env.local.example` for a production build.
 - `npm run build` creates the production bundle.
 - `npm run lint` checks the source code.
 
 ## Local and cloud behavior
 
-Without Firebase environment values, the app stays in local preview mode and keeps folders, notes, files, and sticky tasks in this browser. With Firebase configured, sign-up and sign-in use Firebase Authentication. Folders, notes, files, and sticky tasks then use the authenticated API and are private to the signed-in Firebase UID. Existing local folders, notes, files, and tasks can be imported once after sign-in; the import prompt leaves the browser copy intact.
+Firebase Authentication and API configuration are required to use the workspace. Without both, sign-in is disabled. The API verifies Firebase ID tokens on every data request and scopes database rows and object storage keys to the token UID. Existing local folders, notes, files, tasks, profile, calendar, and whiteboard data can be imported once after sign-in; the import prompt leaves the browser copy intact.
 
-The calendar, whiteboard, demo profile, theme, palette, and illustrative company data remain browser-local. The role selector is still only a visual preview; cloud API authorization is per user, not role-based. This is a private prototype, not a production employee portal. Do not store confidential company or employee information.
+Profile, calendar, and whiteboard data are stored in PostgreSQL under the account UID. Theme and palette preferences are cosmetic and remain on the current device. Accounts are isolated from one another; organization membership, shared company resources, invitations, and role-based administration are not implemented. The current authorization model is suitable only for individual account workspaces, not a shared company portal.
 
 ## Deploy to Firebase Hosting, Cloud Run, and Neon
 
@@ -62,7 +67,7 @@ gcloud run deploy vsr-workspace-api \
 
 ### Free quota and billing notes
 
-Firebase Hosting includes up to 10 GB of stored releases and 10 GB of monthly data transfer at no cost. Cloud Run request-based billing includes monthly free allowances of 2 million requests, 180,000 vCPU-seconds, and 360,000 GiB-seconds. Its 1 GiB free outbound transfer applies within North America, so calls from the Mumbai Cloud Run region to Neon can incur a small network charge. Cloud Run overages and other GCP usage can also be billed. This setup is designed to stay within free quotas for a small prototype but does not guarantee a $0 bill. Review current limits before deployment:
+Firebase Hosting includes up to 10 GB of stored releases and 10 GB of monthly data transfer at no cost. Cloud Run request-based billing includes monthly free allowances of 2 million requests, 180,000 vCPU-seconds, and 360,000 GiB-seconds. Its 1 GiB free outbound transfer applies within North America, so calls from the Mumbai Cloud Run region to Neon can incur a small network charge. Cloud Run overages and other GCP usage can also be billed. This setup does not guarantee a $0 bill. Review current limits before deployment:
 
 - [Firebase Hosting quotas](https://firebase.google.com/docs/hosting/usage-quotas-pricing)
 - [Cloud Run pricing](https://cloud.google.com/run/pricing)

@@ -1,0 +1,316 @@
+.welcome-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: center;
+  gap: 12px clamp(14px, 2vw, 24px);
+  padding: clamp(14px, 2vw, 26px) clamp(14px, 3vw, 40px);
+}
+
+.welcome-topbar {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.welcome-topbar .palette-picker,
+.welcome-topbar .welcome-theme-toggle,
+.welcome-topbar .welcome-contact-button {
+  position: static;
+  min-height: 40px;
+  width: auto;
+  margin: 0;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--welcome-accent) 22%, var(--workspace-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-surface) 88%, transparent);
+  color: var(--welcome-ink);
+  box-shadow: 0 5px 18px rgb(30 35 68 / 6%);
+  backdrop-filter: blur(12px);
+}
+
+.welcome-topbar .palette-picker {
+  display: inline-flex;
+}
+
+.welcome-topbar .palette-picker select {
+  max-width: 145px;
+}
+
+.welcome-topbar .welcome-theme-toggle,
+.welcome-topbar .welcome-contact-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.welcome-topbar .welcome-contact-button {
+  border-color: color-mix(in srgb, var(--welcome-accent) 38%, white);
+  background: linear-gradient(120deg, var(--palette-soft-light), color-mix(in srgb, var(--ui-surface) 92%, transparent));
+  color: var(--welcome-accent);
+}
+
+.welcome-topbar .welcome-theme-toggle:hover,
+.welcome-topbar .welcome-contact-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--welcome-accent);
+}
+
+.welcome-story,
+.welcome-form-panel {
+  position: relative;
+  z-index: 1;
+  min-height: min(690px, calc(100svh - 114px));
+  overflow: hidden;
+}
+
+.welcome-story {
+  padding: clamp(28px, 4vw, 58px);
+  border: 1px solid rgb(255 255 255 / 24%);
+  box-shadow: 0 24px 70px rgb(23 37 84 / 15%);
+}
+
+.welcome-story-copy {
+  margin: 28px 0;
+}
+
+.welcome-story-copy h1 {
+  font-size: clamp(2.7rem, 5vw, 5rem);
+  line-height: 1.02;
+}
+
+.welcome-story-copy p {
+  max-width: 410px;
+}
+
+.welcome-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.welcome-footer-mark {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
+.welcome-form-panel {
+  padding: clamp(24px, 4vw, 56px);
+  border-color: color-mix(in srgb, var(--welcome-accent) 16%, var(--workspace-border));
+  background: color-mix(in srgb, var(--ui-surface) 88%, transparent);
+  box-shadow: 0 24px 70px rgb(23 37 84 / 9%);
+  backdrop-filter: blur(16px);
+}
+
+.welcome-form-card {
+  max-width: 420px;
+}
+
+.welcome-emulator-notice {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #e7c87a;
+  border-radius: 11px;
+  background: #fff8e7;
+  color: #70541b;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.welcome-page[data-theme="dark"] .welcome-emulator-notice {
+  border-color: #665323;
+  background: #30291b;
+  color: #f0d68a;
+}
+
+.welcome-form-card h2 {
+  margin-top: 15px;
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+}
+
+.welcome-form-intro {
+  margin-bottom: 24px;
+  font-size: 0.86rem;
+}
+
+.welcome-auth-tabs {
+  margin-bottom: 22px;
+  padding: 4px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--workspace-border) 48%, var(--ui-surface));
+}
+
+.welcome-auth-tabs button {
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.welcome-form {
+  gap: 16px;
+}
+
+.welcome-field {
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.welcome-field input {
+  min-height: 48px;
+  padding-inline: 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-surface) 92%, var(--workspace-bg));
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.welcome-field input:focus {
+  background: var(--ui-surface);
+}
+
+.welcome-password-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.welcome-forgot-password {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--welcome-accent);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome-password-control input {
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.welcome-password-toggle {
+  min-height: 48px;
+  border-radius: 0 12px 12px 0;
+}
+
+.welcome-create-button {
+  min-height: 48px;
+  margin-top: 5px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  transition: transform 150ms ease, filter 150ms ease;
+}
+
+.welcome-create-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.welcome-contact-dialog a {
+  color: var(--welcome-accent);
+}
+
+.welcome-config-alert {
+  display: grid;
+  justify-content: stretch;
+  gap: 9px;
+  text-align: left;
+}
+
+.welcome-missing-settings {
+  margin: 0;
+  padding-left: 19px;
+  display: grid;
+  gap: 3px;
+}
+
+.welcome-missing-settings code,
+.welcome-config-alert > span code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 5%);
+  font-size: 0.72rem;
+}
+
+.welcome-page[data-theme="dark"] .welcome-topbar .palette-picker,
+.welcome-page[data-theme="dark"] .welcome-topbar .welcome-theme-toggle,
+.welcome-page[data-theme="dark"] .welcome-topbar .welcome-contact-button {
+  border-color: color-mix(in srgb, var(--welcome-accent) 30%, #34394a);
+  background: rgb(25 29 41 / 88%);
+  color: var(--welcome-ink);
+}
+
+.welcome-page[data-theme="dark"] .welcome-topbar .welcome-contact-button {
+  color: var(--welcome-accent);
+}
+
+@media (max-width: 700px) {
+  .welcome-page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-content: start;
+  }
+
+  .welcome-topbar {
+    gap: 7px;
+  }
+
+  .welcome-topbar .palette-picker,
+  .welcome-topbar .welcome-theme-toggle,
+  .welcome-topbar .welcome-contact-button {
+    min-height: 38px;
+    padding-inline: 10px;
+    font-size: 0.68rem;
+  }
+
+  .welcome-topbar .palette-picker select {
+    max-width: 94px;
+  }
+
+  .welcome-story,
+  .welcome-form-panel {
+    min-height: auto;
+  }
+
+  .welcome-story {
+    padding: 23px;
+  }
+
+  .welcome-story-copy {
+    margin: 30px 0;
+  }
+
+  .welcome-story-copy h1 {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+  }
+
+  .welcome-form-panel {
+    padding: 26px 22px 30px;
+  }
+}
+
+@media (max-width: 420px) {
+  .welcome-topbar {
+    flex-wrap: wrap;
+  }
+
+  .welcome-topbar .welcome-contact-button {
+    margin-left: auto;
+  }
+}

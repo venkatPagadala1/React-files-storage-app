@@ -28,8 +28,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { createId, downloadBlob } from "../../lib/workspaceUtils.js";
+import { loadAccountData, saveAccountData } from "../../lib/accountStorage.js";
 
-const STORAGE_KEY = "vsr-workspace-whiteboard-v1";
 const COLORS = ["#172033", "#f15b62", "#f59e0b", "#25a66a", "#4385f5", "#a855e8", "#eb4c9b", "#ffffff"];
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 2.5;
@@ -52,32 +52,6 @@ const INITIAL_BOARD = {
   background: "dots",
   objects: [],
 };
-
-function readBoard() {
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (!saved) return { ...INITIAL_BOARD, objects: [], message: "" };
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed.objects)) {
-      throw new Error("The saved board data is not valid.");
-    }
-    return {
-      title: typeof parsed.title === "string" ? parsed.title : INITIAL_BOARD.title,
-      background: ["dots", "grid", "plain"].includes(parsed.background)
-        ? parsed.background
-        : INITIAL_BOARD.background,
-      objects: parsed.objects,
-      message: "",
-    };
-  } catch (error) {
-    console.error("Could not load the saved whiteboard.", error);
-    return {
-      ...INITIAL_BOARD,
-      objects: [],
-      message: "Your saved board could not be loaded. A blank board is open.",
-    };
-  }
-}
 
 function pointerPosition(event, pan, zoom, canvas = event.currentTarget) {
   const bounds = canvas.getBoundingClientRect();
@@ -301,11 +275,12 @@ function makeExportSvg(objects, title) {
 }
 
 function Whiteboard({ onClose, theme }) {
-  const [initialBoard] = useState(readBoard);
-  const [title, setTitle] = useState(initialBoard.title);
-  const [objects, setObjects] = useState(initialBoard.objects);
-  const [background, setBackground] = useState(initialBoard.background);
-  const [storageMessage, setStorageMessage] = useState(initialBoard.message);
+  const [title, setTitle] = useState(INITIAL_BOARD.title);
+  const [objects, setObjects] = useState(INITIAL_BOARD.objects);
+  const [background, setBackground] = useState(INITIAL_BOARD.background);
+  const [storageMessage, setStorageMessage] = useState("");
+  const [isBoardLoaded, setIsBoardLoaded] = useState(false);
+  const [isSavingBoard, setIsSavingBoard] = useState(false);
   const [tool, setTool] = useState("select");
   const [color, setColor] = useState(COLORS[1]);
   const [strokeWidth, setStrokeWidth] = useState(4);
@@ -330,29 +305,40 @@ function Whiteboard({ onClose, theme }) {
   }, [objects]);
 
   useEffect(() => {
-    function handleStorageError(event) {
-      setStorageMessage(event.detail);
-    }
-
-    window.addEventListener("whiteboard-storage-error", handleStorageError);
-    return () => window.removeEventListener("whiteboard-storage-error", handleStorageError);
+    let active = true;
+    loadAccountData("whiteboard")
+      .then((saved) => {
+        if (!active) return;
+        if (saved && Array.isArray(saved.objects)) {
+          setTitle(typeof saved.title === "string" ? saved.title : INITIAL_BOARD.title);
+          setBackground(["dots", "grid", "plain"].includes(saved.background) ? saved.background : INITIAL_BOARD.background);
+          setObjects(saved.objects);
+        }
+        setIsBoardLoaded(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setStorageMessage(`Could not load your whiteboard: ${error.message}`);
+      });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ title, background, objects }),
-      );
-    } catch (error) {
-      console.error("Could not save the whiteboard.", error);
-      window.dispatchEvent(
-        new CustomEvent("whiteboard-storage-error", {
-          detail: "Could not save this board on this device.",
-        }),
-      );
-    }
-  }, [title, background, objects]);
+    if (!isBoardLoaded) return undefined;
+    setIsSavingBoard(true);
+    const timeoutId = window.setTimeout(() => {
+      saveAccountData("whiteboard", { title, background, objects })
+        .then(() => {
+          setStorageMessage("");
+          setIsSavingBoard(false);
+        })
+        .catch((error) => {
+          setStorageMessage(`Could not save your whiteboard: ${error.message}`);
+          setIsSavingBoard(false);
+        });
+    }, 500);
+    return () => window.clearTimeout(timeoutId);
+  }, [title, background, objects, isBoardLoaded]);
 
   function pushHistory(previous = objectsRef.current) {
     historyRef.current.past = [...historyRef.current.past, previous].slice(-60);
@@ -908,6 +894,15 @@ function Whiteboard({ onClose, theme }) {
 
   const canvasCursor = tool === "hand" ? "grab" : tool === "select" ? "default" : "crosshair";
 
+  if (!isBoardLoaded) {
+    return (
+      <main className="whiteboard-loading" role={storageMessage ? "alert" : "status"}>
+        <p>{storageMessage || "Loading your account whiteboard…"}</p>
+        {storageMessage && <button type="button" className="secondary-action" onClick={onClose}>Back to workspace</button>}
+      </main>
+    );
+  }
+
   return (
     <div className="whiteboard-app" data-theme={theme}>
       <header className="whiteboard-header">
@@ -925,7 +920,7 @@ function Whiteboard({ onClose, theme }) {
             onChange={(event) => setTitle(event.target.value)}
           />
           <span className="whiteboard-save-state">
-            <FontAwesomeIcon icon={faCheck} /> {storageMessage ? "Not saved" : "Saved locally"}
+            <FontAwesomeIcon icon={faCheck} /> {storageMessage ? "Not saved" : isSavingBoard ? "Saving…" : "Saved to your account"}
           </span>
         </div>
         <div className="whiteboard-header-actions">
@@ -1081,7 +1076,7 @@ function Whiteboard({ onClose, theme }) {
           <div className="whiteboard-tip">
             <span className="whiteboard-tip-icon">✦</span>
             <strong>Make space for ideas</strong>
-            <p>Drag on the canvas to draw. Double-click text to edit it. Everything saves in this browser.</p>
+            <p>Drag on the canvas to draw. Double-click text to edit it. Changes save to your account.</p>
           </div>
         </aside>
 

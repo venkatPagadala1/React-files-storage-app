@@ -2,19 +2,21 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
 } from "firebase/auth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { firebaseAuth, isFirebaseAuthEnabled } from "../../lib/firebaseClient.js";
+import { firebaseAuth, isFirebaseAuthEnabled, isLocalAuthEmulator, missingWorkspaceSettings } from "../../lib/firebaseClient.js";
 import { apiFileBlob, apiJson } from "../../lib/apiClient.js";
+import { loadAccountData, saveAccountData } from "../../lib/accountStorage.js";
+import { rememberAccountName } from "../../lib/welcomeNameStorage.js";
 import { readLocalTasks } from "../../lib/taskStorage.js";
 import {
   faFileLines,
   faPlus,
   faRightFromBracket,
-  faShareNodes,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -24,10 +26,6 @@ import {
   PALETTE_STORAGE_KEY,
   THEME_STORAGE_KEY,
 } from "../../lib/workspaceConfig.js";
-import {
-  PREPARATION_CALENDAR_STORAGE_KEY,
-  readPreparationCalendar,
-} from "../../lib/calendarStorage.js";
 import {
   countMatches,
   createId,
@@ -59,76 +57,28 @@ import {
   importLegacyWorkspace,
   initializeWorkspace,
   loadWorkspace,
+  readLegacyBrowserData,
   saveFolder,
   saveFolders,
   saveItem,
 } from "../../lib/workspaceStorage.js";
 
-const roleFeatures = {
-  Admin: [
-    "company",
-    "company-resources",
-    "employee",
-    "sticky-notes",
-    "training",
-    "calendar",
-    "profile",
-    "whiteboard",
-    "upload",
-    "manage-team",
-    "team-admin",
-    "assistant",
-  ],
-  Manager: [
-    "company",
-    "company-resources",
-    "employee",
-    "sticky-notes",
-    "training",
-    "calendar",
-    "profile",
-    "whiteboard",
-    "upload",
-    "assistant",
-  ],
-  Employee: [
-    "company-resources",
-    "employee",
-    "sticky-notes",
-    "training",
-    "calendar",
-    "profile",
-    "whiteboard",
-    "upload",
-    "assistant",
-  ],
-};
+const workspaceFeatures = ["company", "employee", "sticky-notes", "training", "calendar", "profile", "whiteboard", "upload", "assistant"];
+const emptyProfile = { name: "", email: "", title: "", bio: "", avatar: "" };
+const EVENT_REMINDERS_ENABLED_KEY = "vsr-browser-event-reminders-enabled-v1";
+const EVENT_REMINDER_DELIVERED_KEY = "vsr-browser-event-reminders-delivered-v1";
+const EVENT_REMINDER_LEAD_TIME_MS = 10 * 60 * 1000;
 
-const PROFILE_STORAGE_KEY = "vsr-demo-profile-v1";
+function getBrowserNotificationPermission() {
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  return window.Notification.permission;
+}
 
-function getSavedProfile() {
-  const defaultProfile = {
-    name: "Demo Member",
-    email: "demo@example.com",
-    title: "VSR workspace member",
-    bio: "",
-  };
+function getBrowserRemindersEnabled() {
   try {
-    const savedProfile = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (!savedProfile) return defaultProfile;
-    const parsedProfile = JSON.parse(savedProfile);
-    if (
-      typeof parsedProfile.name !== "string" ||
-      typeof parsedProfile.email !== "string" ||
-      typeof parsedProfile.title !== "string" ||
-      typeof parsedProfile.bio !== "string"
-    ) {
-      throw new Error("Saved profile data has an invalid format.");
-    }
-    return parsedProfile;
-  } catch (error) {
-    console.error("Could not load the demo profile.", error);
-    return defaultProfile;
+    return window.localStorage.getItem(EVENT_REMINDERS_ENABLED_KEY) === "enabled";
+  } catch {
+    return false;
   }
 }
 
@@ -157,7 +107,7 @@ function WorkspaceApp() {
   const [dropPosition, setDropPosition] = useState("before");
   const [isRootDropTarget, setIsRootDropTarget] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthReady, setIsAuthReady] = useState(!isFirebaseAuthEnabled);
+  const [isAuthReady, setIsAuthReady] = useState(!firebaseAuth);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState("");
   const [legacyImport, setLegacyImport] = useState(null);
@@ -165,19 +115,18 @@ function WorkspaceApp() {
   const [legacyImportError, setLegacyImportError] = useState("");
   const [storageError, setStorageError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  const [initialCalendarData] = useState(readPreparationCalendar);
-  const [calendarEvents, setCalendarEvents] = useState(initialCalendarData.events);
-  const [calendarIssue, setCalendarIssue] = useState(initialCalendarData.error);
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarIssue, setCalendarIssue] = useState("");
   const [requestedCalendarDate, setRequestedCalendarDate] = useState("");
   const [notificationClock, setNotificationClock] = useState(() => Date.now());
-  const [isShareInfoOpen, setIsShareInfoOpen] = useState(false);
+  const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
+  const [areBrowserRemindersEnabled, setAreBrowserRemindersEnabled] = useState(getBrowserRemindersEnabled);
   const [isSignoutInfoOpen, setIsSignoutInfoOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isBoardOpen, setIsBoardOpen] = useState(false);
   const [activeArea, setActiveArea] = useState("company");
-  const [previewRole, setPreviewRole] = useState("Admin");
-  const [profile, setProfile] = useState(getSavedProfile);
+  const [profile, setProfile] = useState(emptyProfile);
   const [theme, setTheme] = useState(getSavedTheme);
   const [palette, setPalette] = useState(getSavedPalette);
   const [isEditingFile, setIsEditingFile] = useState(false);
@@ -250,9 +199,82 @@ function WorkspaceApp() {
   }, []);
 
   useEffect(() => {
-    if (!firebaseAuth) return undefined;
+    if (!areBrowserRemindersEnabled || browserNotificationPermission !== "granted") return undefined;
+
+    const userId = firebaseAuth?.currentUser?.uid;
+    if (!userId) return undefined;
+
+    let delivered = {};
+    try {
+      delivered = JSON.parse(window.localStorage.getItem(EVENT_REMINDER_DELIVERED_KEY) || "{}");
+      if (!delivered || typeof delivered !== "object" || Array.isArray(delivered)) delivered = {};
+    } catch {
+      delivered = {};
+    }
+
+    const now = Date.now();
+    let didUpdateDelivered = false;
+    for (const event of calendarEvents) {
+      const startsAt = new Date(`${event.date}T${event.startTime || "00:00"}:00`).getTime();
+      if (!Number.isFinite(startsAt)) continue;
+      const reminderKey = `${userId}:${event.id}:${startsAt}`;
+      const reminderAt = startsAt - EVENT_REMINDER_LEAD_TIME_MS;
+      if (now < reminderAt || now >= startsAt || delivered[reminderKey]) continue;
+
+      delivered[reminderKey] = now;
+      didUpdateDelivered = true;
+      const reminder = new window.Notification(`Coming up: ${event.title}`, {
+        body: `Starts at ${event.startTime}${event.type ? ` · ${event.type}` : ""}.`,
+        tag: `workspace-event-${event.id}-${startsAt}`,
+      });
+      reminder.addEventListener("click", () => {
+        window.focus();
+        reminder.close();
+      });
+    }
+
+    if (didUpdateDelivered) {
+      try {
+        window.localStorage.setItem(EVENT_REMINDER_DELIVERED_KEY, JSON.stringify(delivered));
+      } catch {
+        // The notification can still be delivered if browser storage is unavailable.
+      }
+    }
+    return undefined;
+  }, [areBrowserRemindersEnabled, browserNotificationPermission, calendarEvents, notificationClock]);
+
+  async function toggleBrowserReminders() {
+    const wasEnabled = areBrowserRemindersEnabled;
+    let permission = getBrowserNotificationPermission();
+    try {
+      if (permission === "default" && !wasEnabled) {
+        permission = await window.Notification.requestPermission();
+      }
+      setBrowserNotificationPermission(permission);
+
+      if (wasEnabled) {
+        window.localStorage.removeItem(EVENT_REMINDERS_ENABLED_KEY);
+        setAreBrowserRemindersEnabled(false);
+        return;
+      }
+      if (permission === "granted") {
+        window.localStorage.setItem(EVENT_REMINDERS_ENABLED_KEY, "enabled");
+        setAreBrowserRemindersEnabled(true);
+      }
+    } catch (error) {
+      console.error("Could not update browser event reminder settings.", error);
+      setBrowserNotificationPermission(getBrowserNotificationPermission());
+    }
+  }
+
+  useEffect(() => {
+    if (!firebaseAuth) {
+      return undefined;
+    }
     return onAuthStateChanged(firebaseAuth, (user) => {
       setIsWorkspaceOpen(Boolean(user));
+      setIsLoading(Boolean(user));
+      setStorageError("");
       setIsAuthReady(true);
       if (!user) {
         setFolders([]);
@@ -263,20 +285,12 @@ function WorkspaceApp() {
         setIsCreatingNote(false);
         setDraftTitle("");
         setDraftContent("");
+        setProfile(emptyProfile);
+        setCalendarEvents([]);
+        setCalendarIssue("");
         setLegacyImport(null);
       }
     });
-  }, []);
-
-  useEffect(() => {
-    function syncCalendarEvents(event) {
-      if (event.key !== PREPARATION_CALENDAR_STORAGE_KEY) return;
-      const latestCalendar = readPreparationCalendar();
-      setCalendarEvents(latestCalendar.events);
-      setCalendarIssue(latestCalendar.error);
-    }
-    window.addEventListener("storage", syncCalendarEvents);
-    return () => window.removeEventListener("storage", syncCalendarEvents);
   }, []);
 
   useEffect(() => {
@@ -298,7 +312,6 @@ function WorkspaceApp() {
   useEffect(() => {
     if (!isWorkspaceOpen) return undefined;
     let active = true;
-    setIsLoading(true);
     setStorageError("");
     initializeWorkspace()
       .then(async (workspace) => {
@@ -306,6 +319,20 @@ function WorkspaceApp() {
         setFolders(workspace.folders);
         setItems(workspace.items);
         setDraftFolderId(workspace.folders[0]?.id ?? "");
+        const [savedProfile, savedCalendar] = await Promise.all([
+          loadAccountData("profile"),
+          loadAccountData("calendar"),
+        ]);
+        if (!active) return;
+        const user = firebaseAuth.currentUser;
+        setProfile({
+          ...emptyProfile,
+          ...(savedProfile && typeof savedProfile === "object" ? savedProfile : {}),
+          name: savedProfile?.name || user?.displayName || "",
+          email: user?.email || "",
+        });
+        rememberAccountName(user?.email, savedProfile?.name || user?.displayName || "");
+        setCalendarEvents(Array.isArray(savedCalendar?.events) ? savedCalendar.events : []);
         if (isFirebaseAuthEnabled) {
           const migrationStatus = await apiJson("/api/migrations/status");
           if (active && !migrationStatus.completed) {
@@ -313,8 +340,13 @@ function WorkspaceApp() {
               loadWorkspace(),
               Promise.resolve(readLocalTasks()),
             ]);
-            if (localWorkspace.folders.length || localWorkspace.items.length || localTasks.length) {
-              setLegacyImport({ ...localWorkspace, tasks: localTasks });
+            const legacyBrowserData = readLegacyBrowserData();
+            if (
+              localWorkspace.folders.length || localWorkspace.items.length || localTasks.length ||
+              legacyBrowserData.profile || legacyBrowserData.calendar ||
+              legacyBrowserData.whiteboard?.objects?.length
+            ) {
+              setLegacyImport({ ...localWorkspace, tasks: localTasks, legacyBrowserData });
             } else {
               await completeLegacyImport();
             }
@@ -347,7 +379,6 @@ function WorkspaceApp() {
       }
 
       if (event.key === "Escape") {
-        setIsShareInfoOpen(false);
         setIsSignoutInfoOpen(false);
         setIsSidebarOpen(false);
         setIsFileViewerOpen(false);
@@ -921,7 +952,7 @@ function WorkspaceApp() {
       setSearchQuery("");
       setDraftTopics(topics);
       setIsCreatingNote(false);
-      setStatusMessage("Note saved on this device.");
+      setStatusMessage("Note saved to your account.");
     } catch (error) {
       setStatusMessage(`Could not save note: ${error.message}`);
     }
@@ -977,7 +1008,7 @@ function WorkspaceApp() {
     event.target.value = "";
     if (!file) return;
     if (!confirmDiscardDraft()) return;
-    if (isFirebaseAuthEnabled && file.size > 25 * 1024 * 1024) {
+    if (file.size > 25 * 1024 * 1024) {
       setStatusMessage("Files uploaded to the cloud must be 25 MB or smaller.");
       return;
     }
@@ -995,7 +1026,7 @@ function WorkspaceApp() {
     }
     if (
       !window.confirm(
-        `Upload "${file.name}" to "${getFolderPath(folderId, folders)}" and save it ${isFirebaseAuthEnabled ? "to your cloud workspace" : "on this device"}?`,
+        `Upload "${file.name}" to "${getFolderPath(folderId, folders)}" and save it to your account?`,
       )
     ) {
       setStatusMessage(`Upload cancelled for "${file.name}".`);
@@ -1031,7 +1062,7 @@ function WorkspaceApp() {
       setIsCreatingNote(false);
       setDraftTitle(fileItem.title);
       setDraftContent("");
-      setStatusMessage(`Uploaded "${file.name}" ${isFirebaseAuthEnabled ? "to your cloud workspace" : "to this device"}.`);
+      setStatusMessage(`Uploaded "${file.name}" to your account.`);
     } catch (error) {
       setStatusMessage(`Could not store file: ${error.message}`);
     }
@@ -1042,7 +1073,7 @@ function WorkspaceApp() {
     event.target.value = "";
     if (!file || activeItem?.kind !== "file") return;
     if (!confirmDiscardDraft()) return;
-    if (isFirebaseAuthEnabled && file.size > 25 * 1024 * 1024) {
+    if (file.size > 25 * 1024 * 1024) {
       setStatusMessage("Files uploaded to the cloud must be 25 MB or smaller.");
       return;
     }
@@ -1132,7 +1163,7 @@ function WorkspaceApp() {
       setFileDocumentText(fileDraftContent);
       setSavedFileContent(fileDraftContent);
       setIsEditingFile(false);
-      setStatusMessage(`Saved changes to "${updatedFile.title}" ${isFirebaseAuthEnabled ? "to your cloud workspace" : "on this device"}.`);
+      setStatusMessage(`Saved changes to "${updatedFile.title}" in your account.`);
     } catch (error) {
       setStatusMessage(`Could not save changes to "${activeItem.title}": ${error.message}`);
     }
@@ -1155,7 +1186,7 @@ function WorkspaceApp() {
 
   async function handleDeleteItem(itemToDelete = activeItem) {
     if (!itemToDelete) return;
-    if (!window.confirm(`Permanently delete "${itemToDelete.title}" ${isFirebaseAuthEnabled ? "from your cloud workspace" : "from this device"}?`)) {
+    if (!window.confirm(`Permanently delete "${itemToDelete.title}" from your account?`)) {
       return;
     }
 
@@ -1177,7 +1208,7 @@ function WorkspaceApp() {
         setDraftTopics([]);
         setIsCreatingNote(false);
       }
-      setStatusMessage(`Deleted "${itemToDelete.title}" ${isFirebaseAuthEnabled ? "from your cloud workspace" : "from this device"}.`);
+      setStatusMessage(`Deleted "${itemToDelete.title}" from your account.`);
     } catch (error) {
       setStatusMessage(`Could not delete item: ${error.message}`);
     }
@@ -1253,48 +1284,16 @@ function WorkspaceApp() {
   );
 
   function navigateToArea(area) {
-    if (!roleFeatures[previewRole].includes(area)) return;
+    if (!workspaceFeatures.includes(area)) return;
     setActiveArea(area);
     setIsBoardOpen(false);
     setIsSidebarOpen(false);
   }
 
-  function handlePreviewRoleChange(nextRole) {
-    if (!roleFeatures[nextRole]) return;
-    if (!confirmDiscardDraft()) return;
-
-    setPreviewRole(nextRole);
-    if (!roleFeatures[nextRole].includes(activeArea)) {
-      setActiveArea(nextRole === "Employee" ? "company-resources" : "company");
-      setIsBoardOpen(false);
-    }
-  }
-
-  function openLocalWorkspace(authDetails = {}) {
-    const suppliedEmail = typeof authDetails.email === "string" ? authDetails.email.trim() : "";
-    const suppliedName = typeof authDetails.name === "string" ? authDetails.name.trim() : "";
-    if (suppliedEmail) {
-      const emailName = suppliedEmail.split("@")[0].replace(/[._-]+/g, " ");
-      const inferredName = emailName.replace(/\b\w/g, (letter) => letter.toUpperCase());
-      const nextProfile = {
-        ...profile,
-        name: suppliedName || inferredName || "Demo Member",
-        email: suppliedEmail,
-      };
-      setProfile(nextProfile);
-      try {
-        window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
-      } catch (error) {
-        console.error("Could not save the demo profile.", error);
-      }
-    }
-    setIsWorkspaceOpen(true);
-  }
-
   async function openWorkspace(authDetails = {}) {
     setAuthError("");
     if (!firebaseAuth) {
-      openLocalWorkspace(authDetails);
+      setAuthError("Firebase Web App settings and the Cloud Run API URL are required before sign-in.");
       return;
     }
 
@@ -1309,6 +1308,10 @@ function WorkspaceApp() {
       if (authDetails.mode === "signup" && authDetails.name.trim()) {
         await updateProfile(credential.user, { displayName: authDetails.name.trim() });
       }
+      rememberAccountName(
+        credential.user.email || email,
+        credential.user.displayName || authDetails.name.trim(),
+      );
       setProfile((currentProfile) => ({
         ...currentProfile,
         name: credential.user.displayName || authDetails.name.trim() || currentProfile.name,
@@ -1338,6 +1341,16 @@ function WorkspaceApp() {
       const workspace = await importLegacyWorkspace(legacyImport);
       setFolders(workspace.folders);
       setItems(workspace.items);
+      const [savedProfile, savedCalendar] = await Promise.all([
+        loadAccountData("profile"),
+        loadAccountData("calendar"),
+      ]);
+      setProfile((current) => ({
+        ...current,
+        ...(savedProfile && typeof savedProfile === "object" ? savedProfile : {}),
+        email: firebaseAuth.currentUser?.email || "",
+      }));
+      setCalendarEvents(Array.isArray(savedCalendar?.events) ? savedCalendar.events : []);
       setLegacyImport(null);
     } catch (error) {
       setLegacyImportError(`Could not import browser data: ${error.message}`);
@@ -1361,14 +1374,17 @@ function WorkspaceApp() {
     }
   }
 
-  function saveProfile(nextProfile) {
+  async function saveProfile(nextProfile) {
     try {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
-      setProfile(nextProfile);
+      const accountProfile = { ...nextProfile };
+      delete accountProfile.email;
+      await saveAccountData("profile", accountProfile);
+      rememberAccountName(firebaseAuth.currentUser?.email, accountProfile.name);
+      setProfile({ ...accountProfile, email: firebaseAuth.currentUser?.email || "" });
       return true;
     } catch (error) {
-      console.error("Could not save the demo profile.", error);
-      setStatusMessage("Could not save profile details to this browser.");
+      console.error("Could not save account profile.", error);
+      setStatusMessage(`Could not save profile: ${error.message}`);
       return false;
     }
   }
@@ -1385,6 +1401,9 @@ function WorkspaceApp() {
         onThemeChange={setTheme}
         onPaletteChange={setPalette}
         onOpenWorkspace={openWorkspace}
+        onResetPassword={(email) => sendPasswordResetEmail(firebaseAuth, email)}
+        missingSettings={missingWorkspaceSettings}
+        isLocalAuthEmulator={isLocalAuthEmulator}
         authError={authError}
         isAuthenticating={isAuthenticating}
         useRealAuthentication={isFirebaseAuthEnabled}
@@ -1412,7 +1431,7 @@ function WorkspaceApp() {
             </div>
             <h2 id="legacy-import-title">Import this browser’s workspace?</h2>
             <p>
-              This browser has {legacyImport.folders.length} folder{legacyImport.folders.length === 1 ? "" : "s"}, {legacyImport.items.length} document{legacyImport.items.length === 1 ? "" : "s"}, and {legacyImport.tasks.length} task{legacyImport.tasks.length === 1 ? "" : "s"}. Import them into your signed-in cloud workspace? The browser copy will remain here.
+              This browser has {legacyImport.folders.length} folders, {legacyImport.items.length} documents, and {legacyImport.tasks.length} tasks. {legacyImport.legacyBrowserData.profile ? "A profile" : ""}{legacyImport.legacyBrowserData.calendar ? ", calendar events" : ""}{legacyImport.legacyBrowserData.whiteboard?.objects?.length ? ", and a whiteboard" : ""} can also be imported into your account. The browser copy will remain here.
             </p>
             {legacyImportError && <div className="workspace-alert" role="alert">{legacyImportError}</div>}
             <div className="legacy-import-actions">
@@ -1440,9 +1459,7 @@ function WorkspaceApp() {
       <WorkspaceSidebar
         isOpen={isSidebarOpen}
         activeArea={activeArea}
-        previewRole={previewRole}
-        roleFeatures={roleFeatures[previewRole]}
-        onPreviewRoleChange={handlePreviewRoleChange}
+        roleFeatures={workspaceFeatures}
         onNavigateArea={navigateToArea}
         folders={folders}
         items={items}
@@ -1521,11 +1538,10 @@ function WorkspaceApp() {
           visibleItemCount={visibleItems.length}
           isLoading={isLoading}
           canUpload={
-            roleFeatures[previewRole].includes("upload") &&
+            workspaceFeatures.includes("upload") &&
             activeArea === "employee" &&
             folders.length > 0
           }
-          canShare={roleFeatures[previewRole].includes("share")}
           fileInputRef={fileInputRef}
           replaceFileInputRef={replaceFileInputRef}
           onSearchChange={(query) => {
@@ -1535,7 +1551,6 @@ function WorkspaceApp() {
             }
           }}
           onOpenSidebar={() => setIsSidebarOpen(true)}
-          onOpenSharing={() => setIsShareInfoOpen(true)}
           onThemeChange={setTheme}
           onPaletteChange={setPalette}
           onOpenSignout={() => setIsSignoutInfoOpen(true)}
@@ -1544,6 +1559,9 @@ function WorkspaceApp() {
           onReplaceFile={handleReplaceFile}
           onNewNote={startNewNote}
           notifications={notifications}
+          browserNotificationPermission={browserNotificationPermission}
+          areBrowserRemindersEnabled={areBrowserRemindersEnabled}
+          onToggleBrowserReminders={toggleBrowserReminders}
           onOpenNotification={(notification) => {
             if (notification.date) {
               setRequestedCalendarDate({ date: notification.date, requestId: createId() });
@@ -1558,14 +1576,6 @@ function WorkspaceApp() {
             <StickyNotes />
           ) : activeArea === "employee" ? (
             <>
-              <div className="workspace-security-notice" role="note">
-                <strong>Do not store sensitive information here yet.</strong>
-                <span>
-                  This prototype has no authentication, encryption, or secure sharing.
-                  Notes and files are saved unencrypted in this browser profile;
-                  no backend access controls are connected.
-                </span>
-              </div>
               {storageError && (
                 <div className="workspace-alert" role="alert">
                   {storageError}
@@ -1588,7 +1598,7 @@ function WorkspaceApp() {
             <div className="workspace-empty-state">Loading your workspace…</div>
           ) : storageError ? (
             <div className="workspace-empty-state">
-              Try enabling site storage in your browser settings, then reload.
+              Check your connection and reload the workspace.
             </div>
           ) : (
             <div
@@ -1720,19 +1730,18 @@ function WorkspaceApp() {
               onIssueChange={setCalendarIssue}
             />
           ) : activeArea === "profile" ? (
-            <UserProfile profile={profile} onSave={saveProfile} />
+            <UserProfile key={`${profile.email}:${profile.name}`} profile={profile} onSave={saveProfile} />
           ) : (
             <CompanyHub
               view={activeArea}
-              role={previewRole}
               itemCount={items.length}
-              onOpenTraining={() => navigateToArea("training")}
+              userName={profile.name || firebaseAuth.currentUser?.displayName || ""}
+              onOpenDocuments={() => navigateToArea("employee")}
               onStartTraining={() =>
                 startNewNote({ title: "Training preparation", purpose: "training" })
               }
               onOpenBoard={() => {
                 if (!confirmDiscardDraft()) return;
-                if (!roleFeatures[previewRole].includes("whiteboard")) return;
                 setIsBoardOpen(true);
               }}
             />
@@ -1745,11 +1754,10 @@ function WorkspaceApp() {
         <WorkspaceBottomNav
           activeArea={activeArea}
           isBoardOpen={isBoardOpen}
-          roleFeatures={roleFeatures[previewRole]}
+          roleFeatures={workspaceFeatures}
           onNavigate={navigateToArea}
           onOpenBoard={() => {
             if (!confirmDiscardDraft()) return;
-            if (!roleFeatures[previewRole].includes("whiteboard")) return;
             setIsBoardOpen(true);
             setIsSidebarOpen(false);
           }}
@@ -1778,43 +1786,6 @@ function WorkspaceApp() {
         }}
       />
 
-      {isShareInfoOpen && (
-        <div
-          className="share-modal-backdrop"
-          onClick={() => setIsShareInfoOpen(false)}
-        >
-          <section
-            className="share-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="icon-button share-modal-close"
-              aria-label="Close sharing information"
-              onClick={() => setIsShareInfoOpen(false)}
-            >
-              <FontAwesomeIcon icon={faXmark} />
-            </button>
-            <div className="share-modal-icon">
-              <FontAwesomeIcon icon={faShareNodes} />
-            </div>
-            <h2 id="share-modal-title">Workspace sharing</h2>
-            <p>
-              Cloud folders, notes, files, and tasks are private to your signed-in account. Sharing them with another account is not enabled. Calendar, whiteboard, profile, and company demo data remain in this browser. Do not store sensitive company information in this prototype.
-            </p>
-            <button
-              type="button"
-              className="save-note-button"
-              onClick={() => setIsShareInfoOpen(false)}
-            >
-              Got it
-            </button>
-          </section>
-        </div>
-      )}
       {isSignoutInfoOpen && (
         <div
           className="share-modal-backdrop"
@@ -1840,7 +1811,7 @@ function WorkspaceApp() {
             </div>
             <h2 id="signout-modal-title">Sign out of this workspace?</h2>
             <p>
-              Your cloud documents remain saved to your account. Signing out will not delete the browser-local calendar, whiteboard, profile, or theme settings.
+              Your documents, tasks, calendar, whiteboard, and profile remain saved to your account after you sign out. Theme preferences are kept on this device.
             </p>
             <button
               type="button"
@@ -1853,8 +1824,6 @@ function WorkspaceApp() {
                   } catch (error) {
                     setAuthError(`Could not sign out: ${error.message}`);
                   }
-                } else {
-                  setIsWorkspaceOpen(false);
                 }
               }}
             >

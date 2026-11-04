@@ -230,6 +230,39 @@ button.notification-item:active {
   line-height: 1.45;
 }
 
+.notification-reminder-setting {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--workspace-border) 70%, transparent);
+}
+
+.notification-reminder-setting .notification-footnote {
+  flex-basis: auto;
+}
+
+.notification-reminder-toggle {
+  min-height: 32px;
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--workspace-accent) 30%, var(--workspace-border));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--workspace-accent-soft) 64%, var(--ui-surface));
+  color: var(--workspace-accent);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.notification-reminder-toggle:hover {
+  border-color: var(--workspace-accent);
+  background: var(--workspace-accent-soft);
+}
+
 .notification-calendar-link {
   min-height: 34px;
   padding: 0 10px;

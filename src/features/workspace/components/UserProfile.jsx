@@ -28,7 +28,7 @@ function UserProfile({ profile, onSave }) {
     setStatusTone(tone);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     const updatedProfile = {
       ...form,
@@ -38,12 +38,13 @@ function UserProfile({ profile, onSave }) {
       bio: form.bio.trim(),
     };
     if (!updatedProfile.name || !updatedProfile.email) return;
-    if (!onSave(updatedProfile)) {
-      reportStatus("Profile could not be saved in this browser.", "error");
+    reportStatus("Saving profile…", "info");
+    if (!await onSave(updatedProfile)) {
+      reportStatus("Profile could not be saved to your account.", "error");
       return;
     }
     setForm(updatedProfile);
-    reportStatus("Profile saved in this browser.", "success");
+    reportStatus("Profile saved to your account.", "success");
   }
 
   function updateField(field, value) {
@@ -131,12 +132,12 @@ function UserProfile({ profile, onSave }) {
         </div>
         <div>
           <span className="company-eyebrow">YOUR WORKSPACE PROFILE</span>
-          <h2>{form.name || "Demo member"}</h2>
+          <h2>{form.name || "Your profile"}</h2>
           <p>{form.title || "VSR workspace member"}</p>
         </div>
         <span className="profile-preview-badge">
           <FontAwesomeIcon icon={faCircleUser} />
-          Local demo profile
+          Account profile
         </span>
       </section>
 
@@ -166,9 +167,10 @@ function UserProfile({ profile, onSave }) {
                 type="email"
                 value={form.email}
                 maxLength="254"
-                onChange={(event) => updateField("email", event.target.value)}
-                required
+                readOnly
+                aria-describedby="profile-email-help"
               />
+              <small id="profile-email-help">Your email is managed by your sign-in account.</small>
             </label>
             <label>
               Role or learning focus
@@ -220,13 +222,12 @@ function UserProfile({ profile, onSave }) {
                 : getInitials(form.name)}
             </span>
             <span>
-              <strong>{form.name || "Demo member"}</strong>
+              <strong>{form.name || "Your profile"}</strong>
               <small>Learning workspace participant</small>
             </span>
           </div>
           <div className="calendar-local-notice">
-            This prototype stores profile details and comments only in this
-            browser. Other team members cannot see them yet.
+            Profile details are private to your signed-in account. They are not shared with other accounts.
           </div>
         </aside>
       </div>

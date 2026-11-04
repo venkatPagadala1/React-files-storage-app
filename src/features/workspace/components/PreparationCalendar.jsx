@@ -9,7 +9,7 @@ import {
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import { PREPARATION_CALENDAR_STORAGE_KEY, readPreparationCalendar } from "../../../lib/calendarStorage.js";
+import { loadAccountData, saveAccountData } from "../../../lib/accountStorage.js";
 
 const eventTypes = ["Study session", "Interview preparation", "Training", "Project review"];
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -19,11 +19,6 @@ function toDateKey(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function getInitialCalendarState() {
-  const result = readPreparationCalendar();
-  return { events: result.events, storageReady: !result.error, message: result.error };
 }
 
 function formatSelectedDate(dateKey) {
@@ -36,8 +31,7 @@ function formatSelectedDate(dateKey) {
 }
 
 function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIssueChange }) {
-  const [initialCalendarState] = useState(getInitialCalendarState);
-  const [events, setEvents] = useState(initialCalendarState.events);
+  const [events, setEvents] = useState([]);
   const [commentDrafts, setCommentDrafts] = useState({});
   const [selectedDate, setSelectedDate] = useState(() => toDateKey(new Date()));
   const [todayKey] = useState(() => toDateKey(new Date()));
@@ -46,8 +40,23 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [storageReady] = useState(initialCalendarState.storageReady);
-  const [message, setMessage] = useState(initialCalendarState.message);
+  const [storageReady, setStorageReady] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    loadAccountData("calendar")
+      .then((saved) => {
+        if (!active) return;
+        setEvents(Array.isArray(saved?.events) ? saved.events : []);
+        setStorageReady(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setMessage(`Could not load your calendar: ${error.message}`);
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     onEventsChange?.(events);
@@ -95,20 +104,20 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
     [events, selectedDate],
   );
 
-  function saveEvents(nextEvents) {
+  async function saveEvents(nextEvents) {
     try {
-      window.localStorage.setItem(PREPARATION_CALENDAR_STORAGE_KEY, JSON.stringify(nextEvents));
+      await saveAccountData("calendar", { events: nextEvents });
       setEvents(nextEvents);
       setMessage("");
       return true;
     } catch (error) {
       console.error("Could not save preparation calendar events.", error);
-      setMessage("Could not save this event. Check browser storage and try again.");
+      setMessage(`Could not save this event: ${error.message}`);
       return false;
     }
   }
 
-  function handleCreateEvent(event) {
+  async function handleCreateEvent(event) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const title = String(formData.get("title") ?? "").trim();
@@ -133,18 +142,18 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
       notes,
       comments: [],
     };
-    if (!saveEvents([...events, newEvent])) return;
+    if (!await saveEvents([...events, newEvent])) return;
 
     setSelectedDate(date);
     setVisibleMonth(new Date(`${date}T12:00:00`));
     setIsFormOpen(false);
   }
 
-  function handleDeleteEvent(eventId) {
-    saveEvents(events.filter((event) => event.id !== eventId));
+  async function handleDeleteEvent(eventId) {
+    await saveEvents(events.filter((event) => event.id !== eventId));
   }
 
-  function handleAddComment(eventId, event) {
+  async function handleAddComment(eventId, event) {
     event.preventDefault();
     const body = (commentDrafts[eventId] ?? "").trim();
     if (!body) return;
@@ -157,7 +166,7 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
               ...(calendarEvent.comments ?? []),
               {
                 id: crypto.randomUUID(),
-                author: profile.name.trim() || "Demo member",
+                author: profile.name.trim() || profile.email,
                 body,
                 createdAt: new Date().toISOString(),
               },
@@ -165,7 +174,7 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
           }
         : calendarEvent,
     );
-    if (saveEvents(updatedEvents)) {
+    if (await saveEvents(updatedEvents)) {
       setCommentDrafts((drafts) => ({ ...drafts, [eventId]: "" }));
     }
   }
@@ -206,8 +215,7 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
       </section>
 
       <div className="calendar-local-notice" role="note">
-        Events are saved in this browser only. They are not shared, backed up,
-        or synced with Google Calendar, Outlook, or other accounts.
+        Events are saved to your signed-in account and are not shared with other accounts.
       </div>
 
       {message && (
@@ -383,7 +391,7 @@ function PreparationCalendar({ profile, navigationRequest, onEventsChange, onIss
                             [calendarEvent.id]: event.target.value,
                           }))
                         }
-                        placeholder={`Comment as ${profile.name || "Demo member"}...`}
+                        placeholder={`Comment as ${profile.name || "You"}...`}
                         rows="2"
                         maxLength="500"
                         required

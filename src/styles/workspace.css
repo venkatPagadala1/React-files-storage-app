@@ -925,31 +925,12 @@
   line-height: 1.5;
 }
 
-.workspace-security-notice {
-  margin: 0 0 14px;
-  padding: 11px 13px;
-  display: grid;
-  gap: 3px;
-  border: 1px solid #f0d7b4;
-  border-radius: 10px;
-  background: #fff9ee;
-  color: #745323;
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.workspace-security-notice strong {
-  color: #865619;
-  font-size: 0.77rem;
-}
-
 .workspace-content.is-preparation-focused .workspace-heading {
   margin-bottom: 12px;
   align-items: center;
 }
 
-.workspace-content.is-preparation-focused .workspace-heading > div:first-child,
-.workspace-content.is-preparation-focused .workspace-security-notice {
+.workspace-content.is-preparation-focused .workspace-heading > div:first-child {
   display: none;
 }
 

@@ -5,6 +5,7 @@ import "./styles/notifications.css";
 import "./styles/ambientBackground.css";
 import "./styles/stickyNotes.css";
 import "./styles/cloudWorkspace.css";
+import "./styles/welcomePage.css";
 import WorkspaceApp from "./features/workspace/WorkspaceApp.jsx";
 
 function App() {

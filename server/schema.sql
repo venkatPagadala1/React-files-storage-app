@@ -50,3 +50,11 @@ CREATE TABLE IF NOT EXISTS user_migrations (
   owner_uid TEXT PRIMARY KEY,
   legacy_import_completed_at TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS account_data (
+  owner_uid TEXT NOT NULL,
+  data_key TEXT NOT NULL CHECK (data_key IN ('profile', 'calendar', 'whiteboard')),
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (owner_uid, data_key)
+);

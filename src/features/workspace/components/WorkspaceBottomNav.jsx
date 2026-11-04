@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBookOpen,
   faBuilding,
   faCalendarDays,
   faChevronLeft,
@@ -8,21 +7,16 @@ import {
   faChalkboard,
   faCircleUser,
   faFileLines,
-  faFolder,
   faNoteSticky,
-  faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 
 const navigationItems = [
   { area: "company", feature: "company", label: "Overview", icon: faBuilding },
-  { area: "company-resources", feature: "company-resources", label: "Resources", icon: faFolder },
   { area: "employee", feature: "employee", label: "Documents", icon: faFileLines },
   { area: "sticky-notes", feature: "sticky-notes", label: "Tasks", icon: faNoteSticky },
-  { area: "training", feature: "training", label: "Learning", icon: faBookOpen },
   { area: "calendar", feature: "calendar", label: "Calendar", icon: faCalendarDays },
   { area: "whiteboard", feature: "whiteboard", label: "Whiteboard", icon: faChalkboard },
   { area: "profile", feature: "profile", label: "Profile", icon: faCircleUser },
-  { area: "team-admin", feature: "manage-team", label: "Team", icon: faUserShield },
 ];
 
 function WorkspaceBottomNav({

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:auth-emulator": "npx --yes firebase-tools emulators:start --only auth --project demo-vsr-workspace",
+    "dev:local-api": "node server/dev-emulator.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
