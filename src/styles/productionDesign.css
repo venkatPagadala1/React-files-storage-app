@@ -26,13 +26,15 @@
 
 .workspace-sidebar {
   height: 100dvh;
-  min-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   padding: 22px 14px 18px;
   border-right: 1px solid var(--workspace-border);
   background: var(--ui-surface);
 }
 
 .workspace-brand {
+  flex: 0 0 auto;
   gap: 12px;
   padding: 4px 8px 22px;
 }
@@ -49,8 +51,11 @@
 }
 
 .workspace-area-navigation {
+  min-height: 0;
+  flex: 0 1 auto;
   max-height: min(44vh, 470px);
-  overflow: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px 1px 4px 9px;
   gap: 12px;
   scrollbar-width: thin;
@@ -103,13 +108,82 @@
 
 .sidebar-section-heading {
   margin-top: 18px;
+  flex: 0 0 auto;
   font-size: 0.68rem;
 }
 
 .folder-navigation {
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   padding-bottom: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.workspace-shell.is-file-viewer-open {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  padding: 0;
+  background: #0a0e18;
+}
+
+.workspace-shell.is-file-viewer-open::before,
+.workspace-shell.is-file-viewer-open::after,
+.workspace-shell.is-file-viewer-open .workspace-sidebar,
+.workspace-shell.is-file-viewer-open .workspace-topbar,
+.workspace-shell.is-file-viewer-open .workspace-heading,
+.workspace-shell.is-file-viewer-open .workspace-status,
+.workspace-shell.is-file-viewer-open .workspace-alert,
+.workspace-shell.is-file-viewer-open .documents-panel,
+.workspace-shell.is-file-viewer-open .workspace-bottom-nav,
+.workspace-shell.is-file-viewer-open .assistant-launcher {
+  display: none !important;
+}
+
+.workspace-shell.is-file-viewer-open .workspace-main,
+.workspace-shell.is-file-viewer-open .workspace-content,
+.workspace-shell.is-file-viewer-open .workspace-grid,
+.workspace-shell.is-file-viewer-open .editor-panel,
+.workspace-shell.is-file-viewer-open .file-details {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+}
+
+.workspace-shell.is-file-viewer-open .workspace-content,
+.workspace-shell.is-file-viewer-open .editor-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace-shell.is-file-viewer-open .workspace-grid {
+  display: block;
+}
+
+.workspace-shell.is-file-viewer-open .file-details {
+  display: block;
+}
+
+.workspace-shell.is-file-viewer-open .file-details > :not(.file-viewer-stage) {
+  display: none;
+}
+
+.workspace-shell.is-file-viewer-open .file-viewer-stage.expanded {
+  z-index: 10000;
+  inset: 12px;
+  box-shadow: 0 24px 90px rgb(5 10 20 / 40%);
 }
 
 .folder-document-link {

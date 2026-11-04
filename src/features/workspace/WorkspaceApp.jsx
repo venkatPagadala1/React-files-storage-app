@@ -1429,7 +1429,7 @@ function WorkspaceApp() {
 
   return (
     <main
-      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}`}
+      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}${isFileViewerOpen && activeItem?.kind === "file" ? " is-file-viewer-open" : ""}`}
       data-theme={theme}
       data-palette={palette}
       data-area={isBoardOpen ? "whiteboard" : activeArea}
