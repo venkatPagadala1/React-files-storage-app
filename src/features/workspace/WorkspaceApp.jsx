@@ -399,9 +399,13 @@ function WorkspaceApp() {
   }, [isFileViewerOpen]);
 
   const storedActiveItem = items.find((item) => item.id === selectedItemId) ?? null;
-  const activeItem = storedActiveItem?.kind === "file" && loadedFileBlob?.id === storedActiveItem.id
-    ? { ...storedActiveItem, blob: loadedFileBlob.blob }
-    : storedActiveItem;
+  const activeItem = useMemo(
+    () =>
+      storedActiveItem?.kind === "file" && loadedFileBlob?.id === storedActiveItem.id
+        ? { ...storedActiveItem, blob: loadedFileBlob.blob }
+        : storedActiveItem,
+    [storedActiveItem, loadedFileBlob],
+  );
   const {
     filePreviewUrl,
     setFilePreviewUrl,

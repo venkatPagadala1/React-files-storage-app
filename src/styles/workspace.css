@@ -598,8 +598,8 @@
 .folder-document-list {
   display: grid;
   gap: 2px;
-  margin: 2px 0 7px;
-  padding-left: 20px;
+  margin: 2px 0 4px;
+  padding-left: 12px;
 }
 
 .folder-document-link {
