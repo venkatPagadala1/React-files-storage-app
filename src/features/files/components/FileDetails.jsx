@@ -333,9 +333,8 @@ function FileDetails({
     </div>
   );
 
-  const workspaceShell = document.querySelector(".workspace-shell");
-  return isFileViewerOpen && workspaceShell
-    ? createPortal(fileDetails, workspaceShell)
+  return isFileViewerOpen
+    ? createPortal(fileDetails, document.body)
     : fileDetails;
 }
 

@@ -33,6 +33,22 @@
   background: var(--ui-surface);
 }
 
+@media (min-width: 821px) {
+  .workspace-shell {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .workspace-main {
+    height: 100dvh;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
+
 .workspace-brand {
   flex: 0 0 auto;
   gap: 12px;
