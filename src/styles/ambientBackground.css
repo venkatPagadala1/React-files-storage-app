@@ -64,31 +64,31 @@
   background-image:
     radial-gradient(
       ellipse 78% 78% at 0% 8%,
-      color-mix(in srgb, var(--ambient-violet) 48%, transparent),
+      color-mix(in srgb, var(--ambient-violet) 18%, transparent),
       transparent 74%
     ),
     radial-gradient(
       ellipse 78% 84% at 100% 12%,
-      color-mix(in srgb, var(--ambient-pink) 43%, transparent),
+      color-mix(in srgb, var(--ambient-pink) 16%, transparent),
       transparent 72%
     ),
     radial-gradient(
       ellipse 74% 90% at 58% 100%,
-      color-mix(in srgb, var(--ambient-purple) 42%, transparent),
+      color-mix(in srgb, var(--ambient-purple) 15%, transparent),
       transparent 72%
     ),
     radial-gradient(
       ellipse 64% 74% at 100% 88%,
-      color-mix(in srgb, var(--ambient-coral) 34%, transparent),
+      color-mix(in srgb, var(--ambient-coral) 12%, transparent),
       transparent 72%
     ),
     conic-gradient(
       from calc(var(--ambient-time-turn) + var(--ambient-scroll-turn)) at 52% 48%,
       transparent 0deg 42deg,
-      color-mix(in srgb, var(--ambient-coral) 30%, transparent) 82deg,
-      color-mix(in srgb, var(--ambient-pink) 26%, transparent) 136deg,
+      color-mix(in srgb, var(--ambient-coral) 12%, transparent) 82deg,
+      color-mix(in srgb, var(--ambient-pink) 10%, transparent) 136deg,
       transparent 194deg 252deg,
-      color-mix(in srgb, var(--ambient-violet) 28%, transparent) 310deg,
+      color-mix(in srgb, var(--ambient-violet) 11%, transparent) 310deg,
       transparent 360deg
     );
   background-position: 0% 0%, 100% 0%, 45% 100%, 100% 100%, 50% 50%;
@@ -102,31 +102,31 @@
   background-image:
     radial-gradient(
       ellipse 78% 78% at 0% 8%,
-      color-mix(in srgb, var(--ambient-violet) 34%, transparent),
+      color-mix(in srgb, var(--ambient-violet) 12%, transparent),
       transparent 74%
     ),
     radial-gradient(
       ellipse 78% 84% at 100% 12%,
-      color-mix(in srgb, var(--ambient-pink) 30%, transparent),
+      color-mix(in srgb, var(--ambient-pink) 10%, transparent),
       transparent 72%
     ),
     radial-gradient(
       ellipse 74% 90% at 58% 100%,
-      color-mix(in srgb, var(--ambient-purple) 30%, transparent),
+      color-mix(in srgb, var(--ambient-purple) 10%, transparent),
       transparent 72%
     ),
     radial-gradient(
       ellipse 64% 74% at 100% 88%,
-      color-mix(in srgb, var(--ambient-coral) 26%, transparent),
+      color-mix(in srgb, var(--ambient-coral) 8%, transparent),
       transparent 72%
     ),
     conic-gradient(
       from calc(var(--ambient-time-turn) + var(--ambient-scroll-turn)) at 52% 48%,
       transparent 0deg 42deg,
-      color-mix(in srgb, var(--ambient-coral) 24%, transparent) 82deg,
-      color-mix(in srgb, var(--ambient-pink) 22%, transparent) 136deg,
+      color-mix(in srgb, var(--ambient-coral) 8%, transparent) 82deg,
+      color-mix(in srgb, var(--ambient-pink) 7%, transparent) 136deg,
       transparent 194deg 252deg,
-      color-mix(in srgb, var(--ambient-violet) 23%, transparent) 310deg,
+      color-mix(in srgb, var(--ambient-violet) 8%, transparent) 310deg,
       transparent 360deg
     );
 }
@@ -157,21 +157,21 @@
   background-image:
     radial-gradient(
       ellipse 72% 100% at 0% 0%,
-      color-mix(in srgb, var(--ambient-violet) 32%, transparent),
+      color-mix(in srgb, var(--ambient-violet) 9%, transparent),
       transparent 72%
     ),
     radial-gradient(
       ellipse 70% 96% at 100% 10%,
-      color-mix(in srgb, var(--ambient-pink) 28%, transparent),
+      color-mix(in srgb, var(--ambient-pink) 8%, transparent),
       transparent 74%
     ),
     conic-gradient(
       from calc(var(--ambient-time-turn) + var(--ambient-scroll-turn)) at 54% 54%,
       transparent 0deg 46deg,
-      color-mix(in srgb, var(--ambient-coral) 29%, transparent) 92deg,
-      color-mix(in srgb, var(--ambient-pink) 24%, transparent) 145deg,
+      color-mix(in srgb, var(--ambient-coral) 8%, transparent) 92deg,
+      color-mix(in srgb, var(--ambient-pink) 7%, transparent) 145deg,
       transparent 205deg 258deg,
-      color-mix(in srgb, var(--ambient-purple) 30%, transparent) 314deg,
+      color-mix(in srgb, var(--ambient-purple) 8%, transparent) 314deg,
       transparent 360deg
     );
   background-position: 0% 0%, 100% 0%, 50% 50%;

@@ -8,8 +8,11 @@ import {
   faCalendarDays,
   faCircleCheck,
   faCircleUser,
+  faFileLines,
+  faFolderOpen,
   faMagnifyingGlass,
   faMoon,
+  faNoteSticky,
   faPlus,
   faRightFromBracket,
   faSun,
@@ -23,6 +26,9 @@ function WorkspaceHeader({
   theme,
   palette,
   searchQuery,
+  searchResults = [],
+  isSearchLoading = false,
+  searchError = "",
   searchInputRef,
   folderName,
   visibleItemCount,
@@ -39,6 +45,7 @@ function WorkspaceHeader({
   onUpload,
   onReplaceFile,
   onNewNote,
+  onSelectSearchResult,
   notifications = [],
   browserNotificationPermission = "unsupported",
   areBrowserRemindersEnabled = false,
@@ -46,7 +53,9 @@ function WorkspaceHeader({
   onOpenNotification,
 }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const notificationRef = useRef(null);
+  const isSearchActive = isGlobalSearchOpen && Boolean(searchQuery.trim());
   const isEmployeeArea = activeArea === "employee";
   const pageTitle = {
     company: "Your workspace",
@@ -62,8 +71,7 @@ function WorkspaceHeader({
     training: "Prepare, learn, and capture your next steps.",
     "sticky-notes": "Capture quick tasks and check them off as you go.",
   }[activeArea] ?? "Keep your documents and preparation organized.";
-  const searchLabel =
-    isEmployeeArea ? "Search notes and files" : "Search notes and files in employee workspace";
+  const searchLabel = "Search everything...";
 
   useEffect(() => {
     if (!isNotificationsOpen) return undefined;
@@ -85,32 +93,103 @@ function WorkspaceHeader({
 
   return (
     <>
-      <header className="workspace-topbar sticky top-0 z-[5] flex h-[72px] items-center gap-3 border-b border-gray-200 bg-white/92 px-[clamp(24px,3.2vw,48px)] backdrop-blur-md">
+      <header className="workspace-topbar sticky top-0 z-[5] flex min-h-[72px] items-center gap-3 border-b border-gray-200 bg-white/92 px-[clamp(24px,3.2vw,48px)] backdrop-blur-md">
         <button
           type="button"
-          className="inline-grid h-[34px] w-[34px] flex-[0_0_34px] cursor-pointer place-items-center rounded-[9px] border-0 bg-transparent p-0 text-gray-500 transition-[background,color] duration-[140ms] hover:bg-gray-100 hover:text-teal-600"
+          className="topbar-menu-button inline-grid h-[34px] w-[34px] flex-[0_0_34px] cursor-pointer place-items-center rounded-[9px] border-0 bg-transparent p-0 text-gray-500 transition-[background,color] duration-[140ms] hover:bg-gray-100 hover:text-teal-600"
           aria-label="Open navigation"
           onClick={onOpenSidebar}
         >
           <FontAwesomeIcon icon={faBars} />
         </button>
-        <label className="flex h-[42px] w-[min(440px,48vw)] items-center gap-[10px] rounded-[11px] border border-gray-200 bg-gray-50 px-[13px]">
-          <FontAwesomeIcon className="text-[.78rem]" icon={faMagnifyingGlass} />
-          <input
-            ref={searchInputRef}
-            type="search"
-            className="min-w-0 flex-1 border-0 bg-transparent text-[.88rem] font-[inherit] outline-0"
-            value={searchQuery}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={searchLabel}
-            aria-label={searchLabel}
-          />
-          <kbd className="rounded-[5px] border border-gray-200 bg-gray-100 px-[5px] py-[3px] text-[.68rem]">Ctrl / ⌘ K</kbd>
-        </label>
+        <div
+          className="workspace-global-search"
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setIsGlobalSearchOpen(false);
+            }
+          }}
+        >
+          <label className="workspace-search flex h-[42px] min-w-0 items-center gap-[10px] rounded-[11px] border border-gray-200 bg-gray-50 px-[13px]">
+            <FontAwesomeIcon className="text-[.78rem]" icon={faMagnifyingGlass} />
+            <input
+              ref={searchInputRef}
+              type="search"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[.88rem] font-[inherit] outline-0"
+              value={searchQuery}
+              onFocus={() => setIsGlobalSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setIsGlobalSearchOpen(false);
+              }}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder={searchLabel}
+              aria-label={searchLabel}
+              aria-expanded={isSearchActive}
+              aria-controls="workspace-global-search-results"
+              aria-autocomplete="list"
+            />
+            <kbd className="rounded-[5px] border border-gray-200 bg-gray-100 px-[5px] py-[3px] text-[.68rem]">Ctrl / ⌘ K</kbd>
+          </label>
+          {isSearchActive && (
+            <section
+              className="workspace-global-search-results"
+              id="workspace-global-search-results"
+              aria-label="Search results across your workspace"
+              aria-live="polite"
+            >
+              <div className="workspace-global-search-heading">
+                <span>Workspace search</span>
+                <span>{searchResults.length} {searchResults.length === 1 ? "match" : "matches"}</span>
+              </div>
+              {searchError && <p className="workspace-global-search-error" role="status">{searchError}</p>}
+              {searchResults.length > 0 ? (
+                <ul>
+                  {searchResults.map((result) => {
+                    const icon = {
+                      document: faFileLines,
+                      folder: faFolderOpen,
+                      task: faNoteSticky,
+                      calendar: faCalendarDays,
+                      profile: faCircleUser,
+                    }[result.type] ?? faMagnifyingGlass;
+                    return (
+                      <li key={`${result.type}:${result.id}`}>
+                        <button
+                          type="button"
+                          className="workspace-global-search-result"
+                          onClick={() => {
+                            onSelectSearchResult?.(result);
+                            setIsGlobalSearchOpen(false);
+                          }}
+                        >
+                          <span className="workspace-global-search-result-icon">
+                            <FontAwesomeIcon icon={icon} />
+                          </span>
+                          <span className="workspace-global-search-result-copy">
+                            <strong>{result.title}</strong>
+                            <span>{result.detail}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="workspace-global-search-empty">
+                  {isSearchLoading ? "Searching your workspace…" : "No matching items found."}
+                </p>
+              )}
+              {isSearchLoading && searchResults.length > 0 && (
+                <p className="workspace-global-search-loading">Checking task notes…</p>
+              )}
+            </section>
+          )}
+        </div>
+        <div className="workspace-header-actions">
         <div className="relative shrink-0" ref={notificationRef}>
           <button
             type="button"
-            className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-gray-200 bg-gray-50 px-[11px] text-[.82rem] font-bold relative transition border-gray-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600${isNotificationsOpen ? " is-open" : ""}`}
+            className={`topbar-tool-button inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-gray-200 bg-gray-50 px-[11px] text-[.82rem] font-bold text-gray-700 relative transition border-gray-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600${isNotificationsOpen ? " is-open" : ""}`}
             onClick={() => setIsNotificationsOpen((open) => !open)}
             aria-label={`Notifications${notifications.length ? `, ${notifications.length} updates` : ""}`}
             aria-expanded={isNotificationsOpen}
@@ -118,7 +197,7 @@ function WorkspaceHeader({
             title="Notifications"
           >
             <FontAwesomeIcon icon={faBell} />
-            <span>Notifications</span>
+            <span className="topbar-button-label">Notifications</span>
             {notifications.length > 0 && (
               <span className="absolute -top-[6px] -right-[6px] grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-red-500 px-1 text-[.62rem] font-extrabold leading-none text-white" aria-hidden="true">
                 {notifications.length > 9 ? "9+" : notifications.length}
@@ -220,16 +299,16 @@ function WorkspaceHeader({
         </div>
         <button
           type="button"
-          className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+          className="topbar-tool-button inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
           onClick={() => onThemeChange(theme === "light" ? "dark" : "light")}
           aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
           title={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
         >
           <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} />
-          <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
+          <span className="topbar-button-label">{theme === "light" ? "Dark mode" : "Light mode"}</span>
         </button>
-        <label className="min-h-10 rounded-[10px] flex items-center border border-gray-200 bg-gray-50 px-2 text-[.82rem] gap-2">
-          <span>Theme</span>
+        <label className="palette-picker workspace-palette-picker min-h-10 rounded-[10px] flex items-center border border-gray-200 bg-gray-50 px-2 text-[.82rem] gap-2">
+          <span className="palette-picker-label">Theme</span>
           <select
             value={palette}
             onChange={(event) => onPaletteChange(event.target.value)}
@@ -245,7 +324,7 @@ function WorkspaceHeader({
         </label>
         <button
           type="button"
-          className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+          className="topbar-tool-button inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
           onClick={onOpenProfile}
           aria-label="Open my profile"
           title="Open my profile"
@@ -255,18 +334,19 @@ function WorkspaceHeader({
           ) : (
             <FontAwesomeIcon icon={faCircleUser} />
           )}
-          <span>Profile</span>
+          <span className="topbar-button-label">Profile</span>
         </button>
         <button
           type="button"
-          className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          className="topbar-tool-button signout-button inline-flex min-h-10 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-gray-200 bg-gray-50 px-[10px] text-[.82rem] font-bold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           onClick={onOpenSignout}
           aria-label="Sign out"
           title="Sign out"
         >
           <FontAwesomeIcon icon={faRightFromBracket} />
-          <span>Sign out</span>
+          <span className="topbar-button-label">Sign out</span>
         </button>
+        </div>
       </header>
 
       <div className="mb-[30px] flex items-center justify-between gap-6">

@@ -27,22 +27,33 @@
   }
 
   .workspace-topbar {
-    height: 64px;
+    height: auto;
+    flex-wrap: wrap;
+    min-height: 64px;
     min-width: 0;
-    padding: 0 16px;
+    padding: 10px 16px;
     gap: 8px;
   }
 
-  .workspace-search {
+  .workspace-topbar .workspace-global-search {
     width: auto;
     min-width: 0;
-    flex: 1;
+    flex: 1 1 0%;
+  }
+
+  .workspace-topbar .workspace-global-search .workspace-search {
+    width: 100%;
+  }
+
+  .workspace-topbar .workspace-header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .workspace-search kbd,
   .share-button span,
-  .topbar-tool-button span,
-  .workspace-palette-picker > span {
+  .topbar-button-label,
+  .workspace-palette-picker > .palette-picker-label {
     display: none;
   }
 
@@ -83,7 +94,82 @@
   }
 }
 
+@media (min-width: 821px) and (max-width: 1450px) {
+  .workspace-topbar {
+    gap: 8px;
+    padding-inline: clamp(12px, 1.5vw, 22px);
+  }
+
+  .workspace-topbar .workspace-global-search {
+    width: auto;
+    max-width: 560px;
+    flex-basis: 240px;
+  }
+
+  .workspace-topbar .workspace-global-search .workspace-search {
+    width: 100%;
+  }
+
+  .workspace-topbar .topbar-button-label,
+  .workspace-topbar .palette-picker-label {
+    display: none;
+  }
+
+  .workspace-topbar .workspace-palette-picker {
+    width: 132px;
+    min-width: 132px;
+    flex: 0 0 132px;
+    justify-content: center;
+  }
+
+  .workspace-topbar .workspace-palette-picker select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1050px) {
+  .workspace-topbar {
+    flex-wrap: wrap;
+    padding-block: 10px;
+  }
+
+  .workspace-topbar .workspace-global-search {
+    max-width: none;
+  }
+
+  .workspace-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 560px) {
+  .workspace-shell .workspace-bottom-nav {
+    width: calc(100% - 20px);
+    gap: 3px;
+    padding: 5px;
+    border-radius: 17px;
+  }
+
+  .workspace-shell .workspace-bottom-nav-items {
+    justify-content: flex-start;
+    gap: 3px;
+  }
+
+  .workspace-shell .workspace-bottom-nav-item {
+    min-width: 68px;
+    min-height: 52px;
+    padding-inline: 5px;
+    font-size: 0.62rem;
+  }
+
+  .workspace-shell .workspace-bottom-nav-step {
+    width: 26px;
+    min-width: 26px;
+    flex-basis: 26px;
+  }
+
   .workspace-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -116,7 +202,7 @@
     padding: 0;
   }
 
-  .topbar-tool-button span {
+  .topbar-button-label {
     display: none;
   }
 
@@ -126,50 +212,35 @@
   .workspace-topbar {
     height: auto;
     display: grid;
-    grid-template-columns: 36px 36px minmax(36px, 1fr) 36px 36px 36px;
+    grid-template-columns: 36px minmax(0, 1fr);
     grid-template-areas:
-      "menu search search search search search"
-      "share theme palette palette profile signout";
+      "menu search"
+      "actions actions";
     gap: 8px;
     padding: 10px 12px;
   }
 
-  .workspace-topbar .menu-button {
+  .workspace-topbar .topbar-menu-button {
     grid-area: menu;
     width: 36px;
   }
 
-  .workspace-topbar .workspace-search {
+  .workspace-topbar .workspace-global-search {
     grid-area: search;
     width: 100%;
     min-width: 0;
   }
 
-  .workspace-topbar .share-button {
-    grid-area: share;
-    width: 36px;
-    margin: 0;
-  }
-
-  .workspace-topbar .topbar-tool-button:not(.signout-button):not(.profile-shortcut) {
-    grid-area: theme;
-    width: 36px;
-  }
-
-  .workspace-topbar .profile-shortcut {
-    grid-area: profile;
-    width: 36px;
-  }
-
-  .workspace-topbar .workspace-palette-picker {
-    grid-area: palette;
+  .workspace-shell .workspace-topbar .workspace-header-actions {
+    grid-area: actions;
     width: 100%;
-    max-width: none;
+    justify-content: space-between;
   }
 
-  .workspace-topbar .signout-button {
-    grid-area: signout;
-    width: 36px;
+  .workspace-shell .workspace-topbar .workspace-palette-picker {
+    width: 112px;
+    min-width: 112px;
+    flex-basis: 112px;
   }
 }
 

@@ -587,7 +587,8 @@
   }
 
   .workspace-topbar {
-    height: 64px;
+    height: auto;
+    min-height: 64px;
     padding-inline: 16px;
   }
 
@@ -601,10 +602,6 @@
 }
 
 @media (max-width: 560px) {
-  .workspace-shell.has-bottom-nav .assistant-launcher {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 74px + 8px);
-  }
-
   .workspace-heading {
     gap: 16px;
     margin-bottom: 20px;
@@ -909,6 +906,10 @@
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
   }
+}
+
+.workspace-shell.has-bottom-nav .assistant-launcher {
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 78px);
 }
 
 @supports (animation-timeline: scroll()) {

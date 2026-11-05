@@ -43,7 +43,7 @@ function WorkspaceBottomNav({
 
   return (
     <nav
-      className="workspace-bottom-nav fixed bottom-[max(14px,env(safe-area-inset-bottom))] left-1/2 z-20 m-0 flex w-[min(760px,calc(100%-32px))] -translate-x-1/2 gap-0.5 rounded-[17px] border border-transparent p-0.5 backdrop-blur-[18px] min-[821px]:bottom-[calc(max(24px,env(safe-area-inset-bottom))+60px)]"
+      className="workspace-bottom-nav fixed bottom-[max(14px,env(safe-area-inset-bottom))] left-1/2 z-20 m-0 flex w-[min(760px,calc(100%-32px))] -translate-x-1/2 gap-0.5 rounded-[17px] border border-transparent p-0.5 backdrop-blur-[18px]"
       aria-label="Workspace page navigation"
     >
       <button
@@ -74,7 +74,9 @@ function WorkspaceBottomNav({
               aria-label={label}
               title={label}
             >
-              <FontAwesomeIcon icon={icon} />
+              <span className="workspace-bottom-nav-icon">
+                <FontAwesomeIcon icon={icon} />
+              </span>
               <span>{label}</span>
             </button>
           );

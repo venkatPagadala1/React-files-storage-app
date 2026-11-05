@@ -11,7 +11,7 @@ A React and Vite workspace with Firebase Authentication, a UID-scoped Node API o
   3. `npm run dev` starts Vite. Sign up with any test email and password.
 - Emulator accounts and workspace data are temporary and are cleared when the emulator/API processes stop. This local setup cannot connect to production Firebase or Cloud Run and must not be deployed.
 - For the real deployment, use `.env.example` as the template for `.env.production.local`, enter the Firebase Web App values and deployed Cloud Run URL, enable **Email/Password** in Firebase Console, then rebuild and deploy Hosting. Never use `.env.local.example` for a production build.
-- `npm run build` creates the production bundle.
+- `npm run build` creates the production bundle. Build environments must install development dependencies (for example, run `npm ci --include=dev` before the build); Vite, Tailwind CSS, and PostCSS are build-time tools.
 - `npm run lint` checks the source code.
 
 ## Local and cloud behavior
@@ -63,7 +63,7 @@ If file downloads fail with `403 AccessDenied`, create a fresh Neon credential w
 
 ### 4. Build and deploy the frontend
 
-1. Copy the exact Firebase Web App configuration values from the Firebase console into `.env.production.local`; set `VITE_API_BASE_URL` to the Cloud Run URL. Install dependencies and build: `npm install` then `npm run build`.
+1. Copy the exact Firebase Web App configuration values from the Firebase console into `.env.production.local`; set `VITE_API_BASE_URL` to the Cloud Run URL. Install all dependencies, including development dependencies, and build: `npm ci --include=dev` then `npm run build`. Configure any CI/deployment build to use the same install command; do not omit development dependencies before building.
 2. Copy `.firebaserc.example` to `.firebaserc` and replace the project ID, or run `firebase use YOUR_PROJECT_ID`.
 3. Install the Firebase CLI (`npm install --global firebase-tools`) and deploy Hosting: `firebase deploy --only hosting --project YOUR_PROJECT_ID`.
 4. Open the `web.app` site, create an account, and verify the browser import prompt. Smoke-test folder/note/task/file create, update, delete, and retrieval from another browser. Create a second account and verify it cannot access the first account's records by changing IDs in requests.

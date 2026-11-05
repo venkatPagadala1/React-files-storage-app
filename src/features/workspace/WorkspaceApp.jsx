@@ -12,7 +12,7 @@ import { firebaseAuth, isFirebaseAuthEnabled, isLocalAuthEmulator, missingWorksp
 import { apiFileBlob, apiJson } from "../../lib/apiClient.js";
 import { loadAccountData, saveAccountData } from "../../lib/accountStorage.js";
 import { rememberAccountName } from "../../lib/welcomeNameStorage.js";
-import { readLocalTasks } from "../../lib/taskStorage.js";
+import { loadTasks, readLocalTasks } from "../../lib/taskStorage.js";
 import {
   faFileLines,
   faPlus,
@@ -116,6 +116,9 @@ function WorkspaceApp() {
   const [storageError, setStorageError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [searchTasks, setSearchTasks] = useState([]);
+  const [searchTasksLoading, setSearchTasksLoading] = useState(false);
+  const [searchTasksError, setSearchTasksError] = useState("");
   const [calendarIssue, setCalendarIssue] = useState("");
   const [requestedCalendarDate, setRequestedCalendarDate] = useState("");
   const [notificationClock, setNotificationClock] = useState(() => Date.now());
@@ -287,11 +290,46 @@ function WorkspaceApp() {
         setDraftContent("");
         setProfile(emptyProfile);
         setCalendarEvents([]);
+        setSearchTasks([]);
+        setSearchTasksError("");
         setCalendarIssue("");
         setLegacyImport(null);
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!isWorkspaceOpen) {
+      setSearchTasks([]);
+      setSearchTasksError("");
+      setSearchTasksLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+    setSearchTasksLoading(true);
+    setSearchTasksError("");
+    loadTasks()
+      .then((tasks) => {
+        if (active) {
+          setSearchTasks(tasks);
+          setSearchTasksError("");
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          console.error("Could not load tasks for global search.", error);
+          setSearchTasksError(`Tasks could not be searched: ${error.message}`);
+        }
+      })
+      .finally(() => {
+        if (active) setSearchTasksLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isWorkspaceOpen]);
 
   useEffect(() => {
     try {
@@ -463,8 +501,22 @@ function WorkspaceApp() {
     isEditingFile && fileDraftContent !== savedFileContent;
   const isDraftDirty = isNoteDraftDirty || isFileDraftDirty;
 
+  const matchingFolderIds = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return new Set();
+
+    return folders.reduce((matchingIds, folder) => {
+      if (getFolderPath(folder.id, folders).toLowerCase().includes(query)) {
+        getFolderDescendantIds(folders, folder.id).forEach((folderId) =>
+          matchingIds.add(folderId),
+        );
+      }
+      return matchingIds;
+    }, new Set());
+  }, [folders, searchQuery]);
+
   const visibleItems = useMemo(() => {
-    const query = searchQuery.trim().toLocaleLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     return items
       .filter((item) => {
         const matchesFolder =
@@ -473,13 +525,121 @@ function WorkspaceApp() {
           selectedFolderIds.has(item.folderId);
         const matchesSearch =
           !query ||
-          item.title.toLocaleLowerCase().includes(query) ||
+          item.title.toLowerCase().includes(query) ||
+          matchingFolderIds.has(item.folderId) ||
           (item.kind === "note" &&
-            item.content.toLocaleLowerCase().includes(query));
+            item.content.toLowerCase().includes(query)) ||
+          (item.topics ?? []).some((topic) =>
+            [topic.title, topic.importantNotes, topic.issues]
+              .filter(Boolean)
+              .some((value) => value.toLowerCase().includes(query)),
+          );
         return matchesFolder && matchesSearch;
       })
       .sort((first, second) => second.updatedAt - first.updatedAt);
-  }, [items, searchQuery, selectedFolderId, selectedFolderIds]);
+  }, [items, matchingFolderIds, searchQuery, selectedFolderId, selectedFolderIds]);
+
+  const globalSearchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const matches = (values) =>
+      values.some(
+        (value) =>
+          typeof value === "string" &&
+          value.toLowerCase().includes(query),
+      );
+
+    const documentResults = items
+      .filter((item) =>
+        matches([
+          item.title,
+          item.kind === "note" ? item.content : "",
+          ...(item.topics ?? []).flatMap((topic) => [
+            topic.title,
+            topic.importantNotes,
+            topic.issues,
+          ]),
+        ]) || matchingFolderIds.has(item.folderId),
+      )
+      .map((item) => ({
+        type: "document",
+        id: item.id,
+        title: item.title,
+        detail: `${item.kind === "file" ? "File" : "Document"} · ${folders.find((folder) => folder.id === item.folderId)?.name ?? "Unfiled"}`,
+      }));
+    const folderResults = folders
+      .filter((folder) => matches([getFolderPath(folder.id, folders)]))
+      .map((folder) => ({
+        type: "folder",
+        id: folder.id,
+        title: folder.name,
+        detail: "Folder · Documents",
+      }));
+    const taskResults = searchTasks
+      .filter((task) => matches([task.title]))
+      .map((task) => ({
+        type: "task",
+        id: task.id,
+        title: task.title,
+        detail: `Task · ${task.done ? "Completed" : "To do"}`,
+      }));
+    const calendarResults = calendarEvents
+      .filter((event) =>
+        matches([
+          event.title,
+          event.type,
+          event.date,
+          ...(event.comments ?? []).map((comment) => comment.body),
+        ]),
+      )
+      .map((event) => ({
+        type: "calendar",
+        id: event.id,
+        title: event.title,
+        detail: `Calendar · ${event.date} · ${event.startTime}`,
+        date: event.date,
+      }));
+    const profileResults = matches([
+      profile.name,
+      profile.title,
+      profile.bio,
+    ])
+      ? [{
+          type: "profile",
+          id: "profile",
+          title: profile.name || "My profile",
+          detail: ["Profile", profile.title].filter(Boolean).join(" · "),
+        }]
+      : [];
+
+    const currentPageResults = {
+      employee: documentResults,
+      training: documentResults.filter(({ id }) =>
+        items.some((item) => item.id === id && item.purpose === "training"),
+      ),
+      "sticky-notes": taskResults,
+      calendar: calendarResults,
+      profile: profileResults,
+    }[activeArea] ?? [];
+    const orderedResults = [
+      ...folderResults.slice(0, 4),
+      ...currentPageResults,
+      ...documentResults,
+      ...taskResults,
+      ...calendarResults,
+      ...profileResults,
+      ...folderResults,
+    ];
+    const seenResults = new Set();
+    return orderedResults
+      .filter((result) => {
+        const key = `${result.type}:${result.id}`;
+        if (seenResults.has(key)) return false;
+        seenResults.add(key);
+        return true;
+      })
+      .slice(0, 12);
+  }, [activeArea, calendarEvents, folders, items, matchingFolderIds, profile, searchQuery, searchTasks]);
 
   const selectedFolder = activeItem
     ? folders.find((folder) => folder.id === activeItem.folderId)
@@ -1430,7 +1590,7 @@ function WorkspaceApp() {
 
   return (
     <main
-      className={`workspace-shell min-h-[100svh] grid grid-cols-[252px_minmax(0,1fr)] bg-[radial-gradient(ellipse_at_86%_0%,var(--palette-glow-light)_0,transparent_32%),var(--workspace-bg)] text-[var(--workspace-ink)] max-[1050px]:grid-cols-[220px_minmax(0,1fr)] max-[820px]:grid-cols-1 max-[820px]:overflow-x-clip min-[821px]:h-[100dvh] min-[821px]:min-h-0 min-[821px]:overflow-hidden${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav pb-[92px] max-[1050px]:pb-[160px] max-[560px]:pb-[156px]" : ""}`}
+      className={`workspace-shell min-h-[100svh] grid grid-cols-[252px_minmax(0,1fr)] bg-[radial-gradient(ellipse_at_86%_0%,var(--palette-glow-light)_0,transparent_32%),var(--workspace-bg)] text-[var(--workspace-ink)] max-[1050px]:grid-cols-[220px_minmax(0,1fr)] max-[820px]:grid-cols-1 max-[820px]:overflow-x-clip min-[821px]:h-[100dvh] min-[821px]:min-h-0 min-[821px]:overflow-hidden${isWorkspaceOpen ? " has-bottom-nav pb-[92px] max-[1050px]:pb-[160px] max-[560px]:pb-[156px]" : ""}`}
       data-theme={theme}
       data-palette={palette}
       data-area={isBoardOpen ? "whiteboard" : activeArea}
@@ -1550,6 +1710,9 @@ function WorkspaceApp() {
           theme={theme}
           palette={palette}
           searchQuery={searchQuery}
+          searchResults={globalSearchResults}
+          isSearchLoading={searchTasksLoading}
+          searchError={searchTasksError}
           searchInputRef={searchInputRef}
           folderName={activeArea === "employee" ? activeFolder?.name : undefined}
           visibleItemCount={visibleItems.length}
@@ -1561,12 +1724,7 @@ function WorkspaceApp() {
           }
           fileInputRef={fileInputRef}
           replaceFileInputRef={replaceFileInputRef}
-          onSearchChange={(query) => {
-            setSearchQuery(query);
-            if (query.trim() && activeArea !== "employee") {
-              navigateToArea("employee");
-            }
-          }}
+          onSearchChange={setSearchQuery}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onThemeChange={setTheme}
           onPaletteChange={setPalette}
@@ -1575,6 +1733,25 @@ function WorkspaceApp() {
           onUpload={handleUpload}
           onReplaceFile={handleReplaceFile}
           onNewNote={startNewNote}
+          onSelectSearchResult={(result) => {
+            if (result.type === "document") {
+              const item = items.find((candidate) => candidate.id === result.id);
+              if (item) void selectItem(item);
+            } else if (result.type === "folder") {
+              setSearchQuery("");
+              selectFolder(result.id);
+            } else if (result.type === "task") {
+              navigateToArea("sticky-notes");
+            } else if (result.type === "calendar") {
+              setRequestedCalendarDate({
+                date: result.date,
+                requestId: createId(),
+              });
+              navigateToArea("calendar");
+            } else if (result.type === "profile") {
+              navigateToArea("profile");
+            }
+          }}
           notifications={notifications}
           browserNotificationPermission={browserNotificationPermission}
           areBrowserRemindersEnabled={areBrowserRemindersEnabled}
@@ -1590,7 +1767,10 @@ function WorkspaceApp() {
         />
 
           {activeArea === "sticky-notes" ? (
-            <StickyNotes />
+            <StickyNotes
+              searchQuery={searchQuery}
+              onTasksChange={setSearchTasks}
+            />
           ) : activeArea === "employee" ? (
             <>
               {storageError && (
@@ -1768,19 +1948,17 @@ function WorkspaceApp() {
         )}
       </section>
 
-      {!isBoardOpen && (
-        <WorkspaceBottomNav
-          activeArea={activeArea}
-          isBoardOpen={isBoardOpen}
-          roleFeatures={workspaceFeatures}
-          onNavigate={navigateToArea}
-          onOpenBoard={() => {
-            if (!confirmDiscardDraft()) return;
-            setIsBoardOpen(true);
-            setIsSidebarOpen(false);
-          }}
-        />
-      )}
+      <WorkspaceBottomNav
+        activeArea={activeArea}
+        isBoardOpen={isBoardOpen}
+        roleFeatures={workspaceFeatures}
+        onNavigate={navigateToArea}
+        onOpenBoard={() => {
+          if (!confirmDiscardDraft()) return;
+          setIsBoardOpen(true);
+          setIsSidebarOpen(false);
+        }}
+      />
 
       <AssistantPanel
         isOpen={isAssistantOpen}

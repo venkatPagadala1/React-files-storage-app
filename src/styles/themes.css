@@ -2045,8 +2045,8 @@
 
   .workspace-search kbd,
   .share-button span,
-  .topbar-tool-button span,
-  .workspace-palette-picker > span {
+  .topbar-button-label,
+  .workspace-palette-picker > .palette-picker-label {
     display: none;
   }
 }
