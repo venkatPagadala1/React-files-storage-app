@@ -1,70 +1,16 @@
-.sticky-notes-page {
-  display: grid;
-  gap: 22px;
-  padding-bottom: 20px;
-}
-
 .sticky-notes-intro {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 18px;
   border: 1px solid color-mix(in srgb, var(--workspace-accent) 18%, var(--workspace-border));
-  border-radius: 16px;
   background: color-mix(in srgb, var(--ui-surface) 84%, var(--workspace-accent-soft));
 }
 
 .sticky-notes-icon {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 13px;
   background: var(--workspace-accent-soft);
   color: var(--workspace-accent);
 }
 
-.sticky-notes-intro h2 {
-  margin: 0;
-  color: var(--workspace-ink);
-  font-size: 0.95rem;
-}
-
-.sticky-notes-intro p {
-  margin: 4px 0 0;
-  color: var(--workspace-muted);
-  font-size: 0.75rem;
-}
-
-.sticky-notes-progress {
-  margin-left: auto;
-  color: var(--workspace-muted);
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
-
 .sticky-task-form {
-  display: flex;
-  gap: 9px;
-  padding: 13px;
   border: 1px solid var(--workspace-border);
-  border-radius: 13px;
   background: color-mix(in srgb, var(--ui-surface) 88%, transparent);
-}
-
-.sticky-task-form input {
-  min-width: 0;
-  min-height: 40px;
-  flex: 1;
-  padding: 0 12px;
-  border: 1px solid var(--workspace-border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--workspace-bg);
-  color: var(--workspace-ink);
-  font: inherit;
-  font-size: 0.78rem;
 }
 
 .sticky-task-form input:focus {
@@ -72,27 +18,7 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--workspace-accent) 14%, transparent);
 }
 
-.sticky-task-form .primary-action {
-  min-height: 40px;
-  flex: 0 0 auto;
-}
-
-.sticky-task-error {
-  margin: -12px 0 0;
-  color: #b33648;
-  font-size: 0.75rem;
-}
-
-.sticky-task-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 215px), 1fr));
-  align-items: start;
-  gap: 14px;
-}
-
 .sticky-task-card {
-  min-height: 145px;
-  padding: 15px 16px 18px;
   border: 1px solid color-mix(in srgb, #5e4a24 15%, transparent);
   border-radius: 12px 12px 15px 12px;
   box-shadow: 0 8px 20px rgb(30 35 45 / 7%);
@@ -112,43 +38,6 @@
 .sticky-task-tone-6 { background: #9bc8ff; }
 .sticky-task-tone-7 { background: #75edc2; }
 
-.sticky-task-card-topline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #77715e;
-  font-size: 0.67rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.sticky-task-check,
-.sticky-task-delete {
-  width: 27px;
-  height: 27px;
-  flex: 0 0 27px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgb(88 79 57 / 25%);
-  border-radius: 8px;
-  background: rgb(255 255 255 / 45%);
-  color: #5d6655;
-  cursor: pointer;
-}
-
-.sticky-task-check {
-  border-radius: 50%;
-}
-
-.sticky-task-delete {
-  margin-left: auto;
-  border-color: transparent;
-  background: transparent;
-  color: #817b6c;
-  opacity: 0.65;
-}
-
 .sticky-task-delete:hover,
 .sticky-task-delete:focus-visible {
   background: rgb(255 255 255 / 60%);
@@ -156,83 +45,11 @@
   opacity: 1;
 }
 
-.sticky-task-card > p {
-  margin: 13px 0 0;
-  color: #343747;
-  font-size: 0.88rem;
-  font-weight: 650;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.sticky-task-card.is-done > p {
-  color: #777b7d;
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
-.sticky-task-card.is-done .sticky-task-check {
-  border-color: #438b69;
-  background: #438b69;
-  color: white;
-}
-
 .sticky-notes-empty {
-  min-height: 220px;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 9px;
   border: 1px dashed color-mix(in srgb, var(--workspace-accent) 30%, var(--workspace-border));
-  border-radius: 16px;
-  color: var(--workspace-muted);
-  text-align: center;
-}
-
-.sticky-notes-empty > svg {
-  margin-bottom: 3px;
-  color: var(--workspace-accent);
-  font-size: 1.35rem;
-}
-
-.sticky-notes-empty strong {
-  color: var(--workspace-ink);
-  font-size: 0.85rem;
-}
-
-.sticky-notes-empty span {
-  font-size: 0.74rem;
 }
 
 .workspace-shell[data-theme="dark"] .sticky-notes-intro,
 .workspace-shell[data-theme="dark"] .sticky-task-form {
   background: color-mix(in srgb, var(--ui-surface) 90%, var(--workspace-accent-soft));
-}
-
-@media (max-width: 560px) {
-  .sticky-notes-page {
-    gap: 15px;
-  }
-
-  .sticky-notes-intro {
-    flex-wrap: wrap;
-    padding: 14px;
-  }
-
-  .sticky-notes-progress {
-    width: 100%;
-    margin-left: 55px;
-  }
-
-  .sticky-task-form {
-    padding: 9px;
-  }
-
-  .sticky-task-form .primary-action {
-    padding-inline: 10px;
-  }
-
-  .sticky-task-form .primary-action span {
-    display: none;
-  }
 }

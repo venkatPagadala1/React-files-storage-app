@@ -904,40 +904,40 @@ function Whiteboard({ onClose, theme }) {
   }
 
   return (
-    <div className="whiteboard-app" data-theme={theme}>
-      <header className="whiteboard-header">
-        <button type="button" className="whiteboard-brand" onClick={onClose} aria-label="Back to workspace">
-          <span className="whiteboard-brand-mark"><FontAwesomeIcon icon={faChalkboard} /></span>
-          <span><strong>VSR</strong><small>workspace</small></span>
-        </button>
-        <span className="whiteboard-header-divider" />
-        <div className="whiteboard-title-wrap">
+    <div className="whiteboard-app flex h-svh min-h-[520px] w-full flex-col overflow-hidden bg-white [color:var(--board-ink)] [font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]" data-theme={theme}>
+    <header className="whiteboard-header absolute inset-x-2 top-2 z-[8] flex h-11 min-h-11 w-max items-center gap-3 rounded-[15px] border border-[#e8edf4] bg-white/95 px-[10px] py-1 shadow-[0_3px_14px_rgb(28_43_67_/_10%)] backdrop-blur-2xl max-[600px]:right-auto max-[600px]:max-w-[calc(100%-16px)]">
+      <button type="button" className="whiteboard-brand flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left text-inherit" onClick={onClose} aria-label="Back to workspace">
+        <span className="whiteboard-brand-mark grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-[linear-gradient(145deg,#ffc943,#ffb620)] text-white shadow-[0_4px_10px_rgb(249_174_34_/_24%)]"><FontAwesomeIcon icon={faChalkboard} /></span>
+        <span className="grid gap-px"><strong className="text-[0.78rem] tracking-[-0.035em]">VSR</strong><small className="text-[0.62rem] text-[var(--board-muted)]">workspace</small></span>
+      </button>
+      <span className="whiteboard-header-divider hidden" />
+        <div className="whiteboard-title-wrap ml-0.5 grid gap-0.5 max-[600px]:hidden">
           <input
             aria-label="Board name"
-            className="whiteboard-title-input"
+            className="whiteboard-title-input w-[min(190px,22vw)] border-0 bg-transparent p-0 text-[0.8rem] font-semibold text-[var(--board-ink)] outline-none"
             value={title}
             maxLength={70}
             onChange={(event) => setTitle(event.target.value)}
           />
-          <span className="whiteboard-save-state">
+          <span className="whiteboard-save-state hidden">
             <FontAwesomeIcon icon={faCheck} /> {storageMessage ? "Not saved" : isSavingBoard ? "Saving…" : "Saved to your account"}
           </span>
         </div>
-        <div className="whiteboard-header-actions">
-          <button type="button" className="whiteboard-export-button whiteboard-export-png" onClick={handleExportPng}>
+        <div className="whiteboard-header-actions ml-0 flex items-center gap-[5px]">
+          <button type="button" className="whiteboard-export-button whiteboard-export-png flex h-[30px] min-h-[30px] items-center justify-center gap-2 rounded-[9px] border border-[#4585f5] bg-[#4585f5] px-[13px] text-[0.7rem] font-semibold text-white shadow-[0_4px_10px_rgb(69_133_245_/_16%)] transition-colors hover:bg-[#3475eb] max-[600px]:hidden" onClick={handleExportPng}>
             <FontAwesomeIcon icon={faImage} /><span>Export PNG</span>
           </button>
-          <button type="button" className="whiteboard-export-button" onClick={handleExport}>
+          <button type="button" className="whiteboard-export-button flex h-[30px] min-h-[30px] items-center justify-center gap-2 rounded-[9px] border border-[#4585f5] bg-[#4585f5] px-[13px] text-[0.7rem] font-semibold text-white shadow-[0_4px_10px_rgb(69_133_245_/_16%)] transition-colors hover:bg-[#3475eb]" onClick={handleExport}>
             <FontAwesomeIcon icon={faDownload} /><span>Export SVG</span>
           </button>
-          <button type="button" className="whiteboard-exit-button" onClick={onClose} aria-label="Back to documents" title="Back to documents">
+          <button type="button" className="whiteboard-exit-button flex h-[30px] w-[30px] min-h-[30px] items-center justify-center rounded-[9px] border border-[#e4e9f1] bg-white p-0 text-[#596477] transition-colors hover:border-[#cbd9f4] hover:bg-[#f4f7ff] hover:text-[#3974de]" onClick={onClose} aria-label="Back to documents" title="Back to documents">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
       </header>
 
-      <div className="whiteboard-workspace">
-        <aside className="whiteboard-tools" aria-label="Drawing tools">
+      <div className="whiteboard-workspace relative min-h-0 flex-1">
+        <aside className="whiteboard-tools absolute top-[60px] left-1/2 z-[7] flex h-11 w-max max-w-[calc(100%-440px)] -translate-x-1/2 items-center justify-start gap-0.5 overflow-x-auto rounded-2xl border border-[#e8edf4] bg-white/95 px-2 py-[5px] shadow-[0_4px_18px_rgb(28_43_67_/_11%)] backdrop-blur-2xl [scrollbar-width:none] max-[900px]:max-w-[calc(100%-230px)] max-[600px]:left-2 max-[600px]:w-[calc(100%-16px)] max-[600px]:max-w-none max-[600px]:translate-x-0 max-[600px]:h-[42px]" aria-label="Drawing tools">
           <input
             ref={imageInputRef}
             className="visually-hidden"
@@ -948,9 +948,9 @@ function Whiteboard({ onClose, theme }) {
           />
           {TOOLS.map((item, index) => (
             <span className={`whiteboard-tool-group${index === 5 ? " tool-group-separated" : ""}`} key={item.id}>
-              <button
+              <button className="inline-flex min-h-8 min-w-8 items-center justify-center gap-[6px] rounded-lg border border-[#e3e8f0] bg-white px-2 font-[inherit] text-[0.65rem] text-[#5d6b80] hover:border-[#cbd9f4] hover:bg-[#f4f7ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]"
                 type="button"
-                className={`whiteboard-tool-button${tool === item.id ? " is-active" : ""}`}
+                className={`whiteboard-tool-button grid h-[34px] w-[34px] place-items-center rounded-[10px] border border-transparent text-[0.9rem] transition-colors ${tool === item.id ? "is-active bg-[#4585f5] text-white shadow-[0_4px_10px_rgb(69_133_245_/_25%)]" : "text-[#748096] hover:bg-[#f1f5fc] hover:text-[#3974de]"}`}
                 title={`${item.label}${item.shortcut ? ` (${item.shortcut})` : ""}`}
                 aria-label={item.label}
                 aria-pressed={tool === item.id}
@@ -975,26 +975,26 @@ function Whiteboard({ onClose, theme }) {
           </span>
         </aside>
 
-        <aside className="whiteboard-properties" aria-label="Board settings">
-          <div className="properties-heading"><span>QUICK STYLE</span><FontAwesomeIcon icon={faLayerGroup} /></div>
-          <label className="style-control-label" htmlFor="whiteboard-stroke">Stroke</label>
-          <div className="stroke-slider-row">
-            <input id="whiteboard-stroke" type="range" min="1" max="12" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
-            <span>{strokeWidth}</span>
+        <aside className="whiteboard-properties absolute top-[68px] left-2 z-[6] max-h-[calc(100%-84px)] w-[188px] overflow-auto rounded-[14px] border border-[#e8edf4] bg-white/95 px-[11px] py-3 shadow-[0_5px_18px_rgb(28_43_67_/_10%)] backdrop-blur-2xl max-[900px]:w-[174px] max-[850px]:hidden max-[600px]:top-28 max-[600px]:w-40 max-[600px]:p-[10px] max-[600px]:max-h-[calc(100%-124px)]" aria-label="Board settings">
+          <div className="properties-heading mb-3 flex items-center justify-between text-[0.6rem] font-extrabold tracking-[0.1em] text-[#63718a]"><span>QUICK STYLE</span><FontAwesomeIcon className="text-[0.8rem] text-[#a4afc0]" icon={faLayerGroup} /></div>
+          <label className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]" htmlFor="whiteboard-stroke">Stroke</label>
+          <div className="stroke-slider-row flex items-center gap-[10px]">
+            <input className="h-1 w-full cursor-pointer accent-[#4585f5]" id="whiteboard-stroke" type="range" min="1" max="12" value={strokeWidth} onChange={(event) => setStrokeWidth(Number(event.target.value))} />
+            <span className="min-w-[13px] text-right text-[0.7rem] text-[#6b7890]">{strokeWidth}</span>
           </div>
           <div className="whiteboard-width-presets" aria-label="Stroke width presets">
             {[{ label: "S", value: 2 }, { label: "M", value: 4 }, { label: "L", value: 7 }, { label: "XL", value: 11 }].map((preset) => (
               <button type="button" key={preset.label} className={strokeWidth === preset.value ? "is-selected" : ""} onClick={() => setStrokeWidth(preset.value)} aria-pressed={strokeWidth === preset.value}>{preset.label}</button>
             ))}
           </div>
-          <div className="style-divider" />
-          <span className="style-control-label">Color</span>
-          <div className="whiteboard-color-list" aria-label="Stroke color">
+          <div className="style-divider my-[10px] h-px bg-[#eff1f5]" />
+          <span className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]">Color</span>
+          <div className="whiteboard-color-list flex flex-wrap gap-[5px]" aria-label="Stroke color">
             {COLORS.map((swatch) => (
-              <button
+              <button className="inline-flex min-h-8 min-w-8 items-center justify-center gap-[6px] rounded-lg border border-[#e3e8f0] bg-white px-2 font-[inherit] text-[0.65rem] text-[#5d6b80] hover:border-[#cbd9f4] hover:bg-[#f4f7ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]"
                 type="button"
                 key={swatch}
-                className={`whiteboard-color-swatch${color === swatch ? " is-selected" : ""}`}
+                className={`whiteboard-color-swatch h-[21px] w-[21px] flex-[0_0_21px] cursor-pointer rounded-full border-2 border-white bg-[var(--swatch)] shadow-[0_0_0_1px_#e3e7ed] ${color === swatch ? "is-selected shadow-[0_0_0_2px_var(--swatch),0_0_0_4px_white,0_0_0_5px_#dce2eb]" : ""}`}
                 style={{ "--swatch": swatch }}
                 aria-label={`Set color ${swatch}`}
                 aria-pressed={color === swatch}
@@ -1004,10 +1004,10 @@ function Whiteboard({ onClose, theme }) {
           </div>
           {selectedId && (
             <div className="whiteboard-selection-controls">
-              <div className="style-divider" />
-              <span className="style-control-label">Selected object</span>
-              <div className="whiteboard-selection-actions">
-                <button type="button" onClick={duplicateSelected} aria-label="Duplicate selected object" title="Duplicate (Ctrl+D)">
+              <div className="style-divider my-[10px] h-px bg-[#eff1f5]" />
+              <span className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]">Selected object</span>
+              <div className="whiteboard-selection-actions mb-[10px] flex gap-[5px]">
+                <button className="inline-flex min-h-8 min-w-8 items-center justify-center gap-[6px] rounded-lg border border-[#e3e8f0] bg-white px-2 font-[inherit] text-[0.65rem] text-[#5d6b80] hover:border-[#cbd9f4] hover:bg-[#f4f7ff] hover:text-[#3974de]" type="button" onClick={duplicateSelected} aria-label="Duplicate selected object" title="Duplicate (Ctrl+D)">
                   <FontAwesomeIcon icon={faCopy} />
                   Duplicate
                 </button>
@@ -1032,10 +1032,10 @@ function Whiteboard({ onClose, theme }) {
               </div>
               {objects.find((object) => object.id === selectedId)?.type !== "image" && (
                 <>
-                  <label className="style-control-label" htmlFor="whiteboard-selected-color">Object color</label>
+                  <label className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]" htmlFor="whiteboard-selected-color">Object color</label>
                   <input
                     id="whiteboard-selected-color"
-                    className="whiteboard-custom-color"
+                    className="whiteboard-custom-color h-[34px] w-full cursor-pointer rounded-lg border border-[#e3e8f0] bg-white p-[3px]"
                     type="color"
                     value={objects.find((object) => object.id === selectedId)?.color ?? color}
                     onChange={(event) => updateSelectedStyle({ color: event.target.value })}
@@ -1044,15 +1044,15 @@ function Whiteboard({ onClose, theme }) {
               )}
             </div>
           )}
-          <div className="style-divider" />
-          <label className="style-control-label" htmlFor="whiteboard-opacity">Opacity</label>
-          <div className="stroke-slider-row">
-            <input id="whiteboard-opacity" type="range" min="10" max="100" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} />
-            <span>{opacity}%</span>
+          <div className="style-divider my-[10px] h-px bg-[#eff1f5]" />
+          <label className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]" htmlFor="whiteboard-opacity">Opacity</label>
+          <div className="stroke-slider-row flex items-center gap-[10px]">
+            <input className="h-1 w-full cursor-pointer accent-[#4585f5]" id="whiteboard-opacity" type="range" min="10" max="100" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} />
+            <span className="min-w-[13px] text-right text-[0.7rem] text-[#6b7890]">{opacity}%</span>
           </div>
-          <div className="style-divider" />
-          <span className="style-control-label">Canvas</span>
-          <div className="whiteboard-background-options">
+          <div className="style-divider my-[10px] h-px bg-[#eff1f5]" />
+          <span className="style-control-label mb-[7px] block text-[0.6rem] font-semibold uppercase tracking-[0.065em] text-[#7d899d]">Canvas</span>
+          <div className="whiteboard-background-options grid grid-cols-3 gap-[3px]">
             {[
               { id: "dots", name: "Dots" },
               { id: "grid", name: "Grid" },
@@ -1061,35 +1061,35 @@ function Whiteboard({ onClose, theme }) {
               <button
                 type="button"
                 key={option.id}
-                className={`background-option${background === option.id ? " is-selected" : ""}`}
+                className={`background-option flex items-center justify-center gap-[9px] rounded-lg border border-transparent bg-transparent px-0.5 py-[5px] font-[inherit] text-[0.62rem] text-[#69758a] hover:border-[#e5eaf2] hover:bg-[#f7f9fc] hover:text-[#3e4b61] ${background === option.id ? "is-selected border-[#e5eaf2] bg-[#f7f9fc] text-[#3e4b61]" : ""}`}
                 onClick={() => setBackground(option.id)}
                 aria-pressed={background === option.id}
               >
-                <span className={`background-preview background-preview-${option.id}`} />
+                <span className={`background-preview hidden h-5 w-[27px] rounded border border-[#e1e6ee] bg-white background-preview-${option.id}`} />
                 {option.name}
               </button>
             ))}
           </div>
           {(storageMessage || imageError) && (
-            <p className="whiteboard-storage-error" role="alert">{imageError || storageMessage}</p>
+            <p className="whiteboard-storage-error mt-3 text-[0.68rem] leading-[1.45] text-[#b94a48]" role="alert">{imageError || storageMessage}</p>
           )}
-          <div className="whiteboard-tip">
-            <span className="whiteboard-tip-icon">✦</span>
-            <strong>Make space for ideas</strong>
-            <p>Drag on the canvas to draw. Double-click text to edit it. Changes save to your account.</p>
+          <div className="whiteboard-tip mt-3 rounded-[11px] border border-[#e8eefb] bg-[linear-gradient(145deg,#f8faff,#f5f8ff)] p-[9px]">
+            <span className="whiteboard-tip-icon hidden">✦</span>
+            <strong className="block text-[0.7rem] text-[#45536b]">Make space for ideas</strong>
+            <p className="mt-1.5 text-[0.61rem] leading-[1.55] text-[#8490a2]">Drag on the canvas to draw. Double-click text to edit it. Changes save to your account.</p>
           </div>
         </aside>
 
-        <div className="whiteboard-canvas-region">
-          <div className="whiteboard-top-tools">
-            <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!historyAvailability.canUndo}>
+        <div className="whiteboard-canvas-region absolute inset-0 min-w-0 overflow-hidden bg-white">
+          <div className="whiteboard-top-tools absolute bottom-2 left-2 z-[5] flex items-center gap-px rounded-[13px] border border-[#e9edf3] bg-white/95 p-1 shadow-[0_3px_12px_rgb(35_48_73_/_10%)]">
+            <button className="grid h-[27px] min-w-[29px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] font-[inherit] text-[0.75rem] text-[#69768b] hover:bg-[#eef4ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!historyAvailability.canUndo}>
               <FontAwesomeIcon icon={faRotateLeft} />
             </button>
-            <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!historyAvailability.canRedo}>
+            <button className="grid h-[27px] min-w-[29px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] text-[0.75rem] text-[#69768b] hover:bg-[#eef4ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!historyAvailability.canRedo}>
               <FontAwesomeIcon icon={faRotateRight} />
             </button>
-            <span className="canvas-toolbar-divider" />
-            <button
+            <span className="canvas-toolbar-divider mx-1 h-[18px] w-px bg-[#e7ebf1]" />
+            <button className="grid h-[27px] min-w-[29px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] text-[0.75rem] text-[#69768b] hover:bg-[#eef4ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]"
               type="button"
               aria-label="Zoom out"
               title="Zoom out"
@@ -1100,15 +1100,16 @@ function Whiteboard({ onClose, theme }) {
             </button>
             <button
               type="button"
-              className="zoom-percentage"
+              className="zoom-percentage grid h-[27px] min-w-[47px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] font-[inherit] text-[0.7rem] font-semibold text-[#4b586d]"
               onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
               title="Reset zoom and center canvas"
               aria-label="Reset zoom to 100 percent"
             >
               {Math.round(zoom * 100)}%
             </button>
-            <button
+            <button className="grid h-[27px] min-w-[29px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] font-[inherit] text-[0.75rem] text-[#69768b] hover:bg-[#eef4ff] hover:text-[#3974de]"
               type="button"
+              className="grid h-[27px] min-w-[29px] place-items-center rounded-[7px] border-0 bg-transparent px-[5px] font-[inherit] text-[0.75rem] text-[#69768b] hover:bg-[#eef4ff] hover:text-[#3974de] disabled:cursor-default disabled:text-[#c4cbd6]"
               aria-label="Zoom in"
               title="Zoom in"
               onClick={() => setZoomAroundCenter(zoom + ZOOM_STEP)}

@@ -3,177 +3,11 @@
   --board-muted: #8b95a6;
   --board-line: #e9edf3;
   --board-blue: #4585f5;
-  width: 100%;
-  height: 100vh;
-  height: 100svh;
-  min-height: 520px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: var(--board-ink);
-  background: #f7f9fc;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.whiteboard-header {
-  position: relative;
-  z-index: 4;
-  height: 68px;
-  min-height: 68px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 0 26px;
-  border-bottom: 1px solid var(--board-line);
-  background: #fff;
-}
-
-.whiteboard-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.whiteboard-brand-mark {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  background: linear-gradient(145deg, #5d93fa, #3475eb);
-  color: white;
-  box-shadow: 0 5px 12px rgb(69 133 245 / 22%);
-}
-
-.whiteboard-brand > span:last-child {
-  display: grid;
-  gap: 1px;
-}
-
-.whiteboard-brand strong {
-  font-size: 0.87rem;
-  letter-spacing: -0.035em;
-}
-
-.whiteboard-brand small {
-  color: var(--board-muted);
-  font-size: 0.68rem;
-}
-
-.whiteboard-header-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--board-line);
-}
-
-.whiteboard-title-wrap {
-  display: grid;
-  gap: 2px;
-}
-
-.whiteboard-title-input {
-  width: min(320px, 35vw);
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--board-ink);
-  font-size: 0.93rem;
-  font-weight: 680;
-  letter-spacing: -0.02em;
 }
 
 .whiteboard-title-input:focus-visible {
   outline: 2px solid rgb(69 133 245 / 50%);
   outline-offset: 3px;
-}
-
-.whiteboard-save-state {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #929cac;
-  font-size: 0.67rem;
-}
-
-.whiteboard-save-state svg {
-  color: #34a879;
-  font-size: 0.59rem;
-}
-
-.whiteboard-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-}
-
-.whiteboard-export-button,
-.whiteboard-exit-button {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 13px;
-  border: 1px solid #e4e9f1;
-  border-radius: 10px;
-  background: #fff;
-  color: #596477;
-  font-size: 0.77rem;
-  font-weight: 620;
-  cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-
-.whiteboard-export-button:hover,
-.whiteboard-exit-button:hover {
-  border-color: #cbd9f4;
-  background: #f4f7ff;
-  color: #3974de;
-}
-
-.whiteboard-export-button {
-  border-color: #4585f5;
-  background: #4585f5;
-  color: #fff;
-  box-shadow: 0 4px 10px rgb(69 133 245 / 16%);
-}
-
-.whiteboard-export-button:hover {
-  border-color: #3475eb;
-  background: #3475eb;
-  color: #fff;
-}
-
-.whiteboard-exit-button {
-  width: 36px;
-  padding: 0;
-}
-
-.whiteboard-workspace {
-  min-height: 0;
-  flex: 1;
-  display: grid;
-  grid-template-columns: 58px 214px minmax(0, 1fr);
-}
-
-.whiteboard-tools {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 17px 8px;
-  border-right: 1px solid var(--board-line);
-  background: #fff;
 }
 
 .whiteboard-tool-group {
@@ -193,36 +27,6 @@
   height: 1px;
   background: var(--board-line);
   content: "";
-}
-
-.whiteboard-tool-button {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  background: transparent;
-  color: #748096;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
-}
-
-.whiteboard-tool-button:hover {
-  background: #f1f5fc;
-  color: #3974de;
-}
-
-.whiteboard-tool-button.is-active {
-  background: #4585f5;
-  color: #fff;
-  box-shadow: 0 5px 12px rgb(69 133 245 / 24%);
-}
-
-.whiteboard-tool-button.clear-tool:hover {
-  background: #fff0ef;
-  color: #d65b57;
 }
 
 .whiteboard-tooltip {
@@ -261,113 +65,6 @@
   font-size: 0.65rem;
 }
 
-.whiteboard-properties {
-  position: relative;
-  z-index: 2;
-  padding: 24px 18px 20px;
-  border-right: 1px solid var(--board-line);
-  background: #fff;
-}
-
-.properties-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 25px;
-  color: #63718a;
-  font-size: 0.63rem;
-  font-weight: 770;
-  letter-spacing: 0.1em;
-}
-
-.properties-heading svg {
-  color: #a4afc0;
-  font-size: 0.8rem;
-}
-
-.style-control-label {
-  display: block;
-  margin-bottom: 9px;
-  color: #7d899d;
-  font-size: 0.67rem;
-  font-weight: 680;
-  text-transform: uppercase;
-  letter-spacing: 0.065em;
-}
-
-.stroke-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.stroke-slider-row input {
-  width: 100%;
-  height: 4px;
-  accent-color: #4585f5;
-  cursor: pointer;
-}
-
-.stroke-slider-row span {
-  min-width: 13px;
-  color: #6b7890;
-  font-size: 0.7rem;
-  text-align: right;
-}
-
-.style-divider {
-  height: 1px;
-  margin: 15px 0;
-  background: #eff1f5;
-}
-
-.whiteboard-color-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.whiteboard-color-swatch {
-  width: 23px;
-  height: 23px;
-  flex: 0 0 23px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: var(--swatch);
-  box-shadow: 0 0 0 1px #e3e7ed;
-  cursor: pointer;
-}
-
-.whiteboard-color-swatch.is-selected {
-  box-shadow: 0 0 0 2px var(--swatch), 0 0 0 4px white, 0 0 0 5px #dce2eb;
-}
-
-.whiteboard-background-options {
-  display: grid;
-  gap: 6px;
-}
-
-.background-option {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: #69758a;
-  font-size: 0.72rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.background-option:hover,
-.background-option.is-selected {
-  border-color: #e5eaf2;
-  background: #f7f9fc;
-  color: #3e4b61;
-}
-
 .background-preview {
   width: 27px;
   height: 20px;
@@ -384,53 +81,6 @@
 .background-preview-grid {
   background-image: linear-gradient(#e4eaf3 1px, transparent 1px), linear-gradient(90deg, #e4eaf3 1px, transparent 1px);
   background-size: 7px 7px;
-}
-
-.whiteboard-tip {
-  margin-top: 29px;
-  padding: 13px 12px 12px;
-  border: 1px solid #e8eefb;
-  border-radius: 11px;
-  background: linear-gradient(145deg, #f8faff, #f5f8ff);
-}
-
-.whiteboard-tip-icon {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 9px;
-  border-radius: 7px;
-  background: #e8f0ff;
-  color: #4883ef;
-  font-size: 0.8rem;
-}
-
-.whiteboard-tip strong {
-  display: block;
-  color: #45536b;
-  font-size: 0.7rem;
-}
-
-.whiteboard-tip p {
-  margin: 6px 0 0;
-  color: #8490a2;
-  font-size: 0.65rem;
-  line-height: 1.55;
-}
-
-.whiteboard-storage-error {
-  margin: 12px 0 0;
-  color: #b94a48;
-  font-size: 0.68rem;
-  line-height: 1.45;
-}
-
-.whiteboard-canvas-region {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  background: #fbfcfe;
 }
 
 .whiteboard-canvas {
@@ -490,19 +140,6 @@
 }
 
 .whiteboard-top-tools {
-  position: absolute;
-  top: 17px;
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 5px;
-  transform: translateX(-50%);
-  border: 1px solid #e9edf3;
-  border-radius: 12px;
-  background: rgb(255 255 255 / 94%);
-  box-shadow: 0 8px 25px rgb(35 48 73 / 9%);
 }
 
 .whiteboard-top-tools button {
@@ -729,22 +366,8 @@
 /* Floating canvas workspace inspired by modern infinite whiteboards */
 .whiteboard-app {
   --board-line: #e5eaf2;
-  background: #fff;
 }
 .whiteboard-header {
-  position: absolute;
-  inset: 8px 8px auto;
-  z-index: 8;
-  width: max-content;
-  height: 44px;
-  min-height: 44px;
-  gap: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e8edf4;
-  border-radius: 15px;
-  background: rgb(255 255 255 / 94%);
-  box-shadow: 0 3px 14px rgb(28 43 67 / 10%);
-  backdrop-filter: blur(16px);
 }
 .whiteboard-brand { gap: 8px; }
 .whiteboard-brand-mark {
@@ -765,16 +388,8 @@
 }
 .whiteboard-exit-button { width: 30px; }
 .whiteboard-workspace {
-  position: relative; display: block; min-height: 0; flex: 1;
 }
 .whiteboard-tools {
-  position: absolute; top: 8px; left: 50%; z-index: 7;
-  height: 44px; width: max-content; max-width: calc(100% - 440px);
-  flex-direction: row; justify-content: flex-start; gap: 2px;
-  overflow-x: auto; padding: 5px 8px; transform: translateX(-50%);
-  border: 1px solid #e8edf4; border-radius: 16px;
-  background: rgb(255 255 255 / 95%); box-shadow: 0 4px 18px rgb(28 43 67 / 11%);
-  backdrop-filter: blur(16px); scrollbar-width: none;
 }
 .whiteboard-tools::-webkit-scrollbar { display: none; }
 .whiteboard-tool-button { width: 34px; height: 34px; border-radius: 10px; }
@@ -785,10 +400,6 @@
 }
 .whiteboard-tooltip { top: calc(100% + 11px); left: 50%; transform: translateX(-50%); }
 .whiteboard-properties {
-  position: absolute; top: 68px; left: 8px; z-index: 6;
-  width: 188px; padding: 12px 11px; border: 1px solid #e8edf4;
-  border-radius: 14px; box-shadow: 0 5px 18px rgb(28 43 67 / 10%);
-  background: rgb(255 255 255 / 96%); backdrop-filter: blur(16px);
 }
 .properties-heading { margin-bottom: 12px; font-size: .6rem; }
 .style-control-label { margin-bottom: 7px; font-size: .6rem; }
@@ -805,9 +416,6 @@
 .whiteboard-canvas-dots { background-color: #fff; background-image: none; }
 .whiteboard-canvas-grid { background-color: #fff; }
 .whiteboard-top-tools {
-  top: auto; right: auto; bottom: 8px; left: 8px; z-index: 5;
-  gap: 1px; padding: 4px; transform: none; border-radius: 13px;
-  box-shadow: 0 3px 12px rgb(35 48 73 / 10%);
 }
 .whiteboard-top-tools button { min-width: 29px; height: 27px; }
 .whiteboard-top-tools button:nth-of-type(1) { order: 10; }

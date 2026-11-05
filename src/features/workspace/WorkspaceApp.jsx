@@ -1407,7 +1407,7 @@ function WorkspaceApp() {
   }
 
   if (isFirebaseAuthEnabled && !isAuthReady) {
-    return <main className="welcome-auth-loading">Checking your sign-in…</main>;
+    return <main className="welcome-auth-loading grid min-h-screen place-items-center bg-[#101918] font-[600] text-[0.9rem] text-[#edf0f7]">Checking your sign-in…</main>;
   }
 
   if (!isWorkspaceOpen) {
@@ -1430,28 +1430,28 @@ function WorkspaceApp() {
 
   return (
     <main
-      className={`workspace-shell${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav" : ""}`}
+      className={`workspace-shell min-h-[100svh] grid grid-cols-[252px_minmax(0,1fr)] bg-[radial-gradient(ellipse_at_86%_0%,var(--palette-glow-light)_0,transparent_32%),var(--workspace-bg)] text-[var(--workspace-ink)] max-[1050px]:grid-cols-[220px_minmax(0,1fr)] max-[820px]:grid-cols-1 max-[820px]:overflow-x-clip min-[821px]:h-[100dvh] min-[821px]:min-h-0 min-[821px]:overflow-hidden${isWorkspaceOpen && !isBoardOpen ? " has-bottom-nav pb-[92px] max-[1050px]:pb-[160px] max-[560px]:pb-[156px]" : ""}`}
       data-theme={theme}
       data-palette={palette}
       data-area={isBoardOpen ? "whiteboard" : activeArea}
     >
       {legacyImport && (
-        <div className="share-modal-backdrop legacy-import-backdrop">
+        <div className="share-modal-backdrop fixed inset-0 z-[100] grid place-items-center bg-[rgb(20_26_45_/_42%)] p-5 backdrop-blur-[4px]">
           <section
-            className="share-modal legacy-import-modal"
+            className="share-modal relative w-[min(500px,calc(100vw-32px))] rounded-[18px] border border-[#e8eaf0] bg-white p-[30px] text-center shadow-[0_25px_70px_rgb(16_24_40_/_20%)]"
             role="dialog"
             aria-modal="true"
             aria-labelledby="legacy-import-title"
           >
-            <div className="share-modal-icon">
+            <div className="share-modal-icon mx-auto mb-[15px] grid h-12 w-12 place-items-center rounded-[15px] bg-[#e9f6f2] text-[#0f766e]">
               <FontAwesomeIcon icon={faFileLines} />
             </div>
-            <h2 id="legacy-import-title">Import this browser’s workspace?</h2>
-            <p>
+            <h2 className="m-0 text-[1.05rem] text-[#292f40]" id="legacy-import-title">Import this browser’s workspace?</h2>
+            <p className="mb-5 mt-[11px] text-[0.8rem] leading-[1.65] text-[#747d8e]">
               This browser has {legacyImport.folders.length} folders, {legacyImport.items.length} documents, and {legacyImport.tasks.length} tasks. {legacyImport.legacyBrowserData.profile ? "A profile" : ""}{legacyImport.legacyBrowserData.calendar ? ", calendar events" : ""}{legacyImport.legacyBrowserData.whiteboard?.objects?.length ? ", and a whiteboard" : ""} can also be imported into your account. The browser copy will remain here.
             </p>
-            {legacyImportError && <div className="workspace-alert" role="alert">{legacyImportError}</div>}
-            <div className="legacy-import-actions">
+            {legacyImportError && <div className="workspace-alert mb-[14px] mt-3 flex items-center justify-between gap-3 rounded-[10px] border border-[#f1c5cb] bg-[#fff2f3] px-[13px] py-[11px] text-[0.86rem] leading-[1.5] text-[#9d3341]" role="alert">{legacyImportError}</div>}
+            <div className="legacy-import-actions mt-5 flex justify-end gap-[9px] max-[480px]:flex-col-reverse">
               <button
                 type="button"
                 className="secondary-action"
@@ -1537,12 +1537,12 @@ function WorkspaceApp() {
         }}
       />
 
-      <section className="workspace-main">
+      <section className="workspace-main min-w-0 min-[821px]:h-[100dvh] min-[821px]:min-h-0 min-[821px]:overflow-x-hidden min-[821px]:overflow-y-auto min-[821px]:overscroll-y-contain">
         {isBoardOpen ? (
           <Whiteboard onClose={() => setIsBoardOpen(false)} theme={theme} />
         ) : (
         <div
-          className={`workspace-content${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+          className={`workspace-content mx-auto w-full max-w-[1600px] px-[clamp(24px,3.4vw,48px)] py-[clamp(24px,3.4vw,48px)] max-[560px]:px-[14px] max-[560px]:py-[22px] max-[560px]:pb-[30px]${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
         >
         <WorkspaceHeader
           activeArea={activeArea}
@@ -1594,12 +1594,12 @@ function WorkspaceApp() {
           ) : activeArea === "employee" ? (
             <>
               {storageError && (
-                <div className="workspace-alert" role="alert">
+                <div className="workspace-alert mb-[14px] flex items-center justify-between gap-3 rounded-[10px] border border-[#f1c5cb] bg-[#fff2f3] px-[13px] py-[11px] text-[0.86rem] leading-[1.5] text-[#9d3341]" role="alert">
                   {storageError}
                 </div>
               )}
               {statusMessage && (
-                <div className="workspace-status" role="status" aria-live="polite">
+                <div className="workspace-status mb-[14px] flex items-center justify-between gap-3 rounded-[10px] border border-[#dfe3f4] bg-[#f8f8ff] px-[13px] py-[11px] text-[0.86rem] leading-[1.5] text-[#5552a0]" role="status" aria-live="polite">
                   <span>{statusMessage}</span>
                   <button
                     type="button"
@@ -1612,14 +1612,14 @@ function WorkspaceApp() {
                 </div>
               )}
               {isLoading ? (
-            <div className="workspace-empty-state">Loading your workspace…</div>
+            <div className="workspace-empty-state flex min-h-[340px] flex-col items-center justify-center px-7 py-7 text-center text-[#858c9b]">Loading your workspace…</div>
           ) : storageError ? (
-            <div className="workspace-empty-state">
+            <div className="workspace-empty-state flex min-h-[340px] flex-col items-center justify-center px-7 py-7 text-center text-[#858c9b]">
               Check your connection and reload the workspace.
             </div>
           ) : (
             <div
-              className={`workspace-grid${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+              className={`workspace-grid grid grid-cols-[minmax(290px,0.86fr)_minmax(380px,1.14fr)] items-stretch gap-[18px] max-[1050px]:grid-cols-[minmax(260px,0.9fr)_minmax(300px,1.1fr)] max-[820px]:grid-cols-1 max-[560px]:gap-[10px]${isPreparationTrackerFocused ? " is-preparation-focused !grid-cols-[minmax(0,1fr)]" : ""}`}
             >
               {!isPreparationTrackerFocused && (
                 <DocumentList
@@ -1639,7 +1639,7 @@ function WorkspaceApp() {
               )}
 
               <section
-                className={`editor-panel${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
+                className={`editor-panel min-w-0 min-h-[540px] rounded-[var(--ui-radius-md)] border border-[var(--workspace-border)] bg-[var(--ui-surface)] p-[18px] shadow-[var(--ui-shadow-card)] max-[820px]:min-h-[360px]${isPreparationTrackerFocused ? " is-preparation-focused" : ""}`}
                 aria-label="Document editor"
               >
                 {isCreatingNote || activeItem?.kind === "note" ? (
@@ -1716,12 +1716,12 @@ function WorkspaceApp() {
                     onDownload={handleDownload}
                   />
                 ) : (
-                  <div className="editor-empty-state">
-                    <div className="editor-empty-orbit">
+                  <div className="editor-empty-state flex min-h-[320px] flex-col items-center justify-center text-center">
+                    <div className="editor-empty-orbit grid h-[52px] w-[52px] place-items-center rounded-2xl bg-[var(--workspace-accent-soft)] text-[1.15rem] text-[var(--workspace-accent)]">
                       <FontAwesomeIcon icon={faFileLines} />
                     </div>
-                    <h2>Your ideas, in one place</h2>
-                    <p>
+                    <h2 className="mb-0 mt-4 text-[1.05rem] font-semibold text-[var(--workspace-ink)]">Your ideas, in one place</h2>
+                    <p className="mt-2 max-w-[290px] text-[0.88rem] leading-[1.55] text-[var(--workspace-muted)]">
                       Select a document to view it, or create a note to start
                       planning your next step.
                     </p>
@@ -1806,11 +1806,11 @@ function WorkspaceApp() {
 
       {isSignoutInfoOpen && (
         <div
-          className="share-modal-backdrop"
+          className="share-modal-backdrop fixed inset-0 z-10 grid place-items-center bg-[rgb(20_26_45_/_42%)] p-5 backdrop-blur-[4px]"
           onClick={() => setIsSignoutInfoOpen(false)}
         >
           <section
-            className="share-modal"
+            className="share-modal relative w-[min(100%,400px)] rounded-[18px] border border-[#e8eaf0] bg-white p-[30px] text-center shadow-[0_25px_70px_rgb(16_24_40_/_20%)]"
             role="dialog"
             aria-modal="true"
             aria-labelledby="signout-modal-title"
@@ -1818,17 +1818,17 @@ function WorkspaceApp() {
           >
             <button
               type="button"
-              className="icon-button share-modal-close"
+              className="icon-button share-modal-close absolute right-3 top-3"
               aria-label="Close sign-out information"
               onClick={() => setIsSignoutInfoOpen(false)}
             >
               <FontAwesomeIcon icon={faXmark} />
             </button>
-            <div className="share-modal-icon">
+            <div className="share-modal-icon mx-auto mb-[15px] grid h-12 w-12 place-items-center rounded-[15px] bg-[#e9f6f2] text-[#0f766e]">
               <FontAwesomeIcon icon={faRightFromBracket} />
             </div>
-            <h2 id="signout-modal-title">Sign out of this workspace?</h2>
-            <p>
+            <h2 className="m-0 text-[1.05rem] text-[#292f40]" id="signout-modal-title">Sign out of this workspace?</h2>
+            <p className="mb-5 mt-[11px] text-[0.8rem] leading-[1.65] text-[#747d8e]">
               Your documents, tasks, calendar, whiteboard, and profile remain saved to your account after you sign out. Theme preferences are kept on this device.
             </p>
             <button

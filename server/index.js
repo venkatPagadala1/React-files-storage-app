@@ -533,11 +533,30 @@ app.post("/api/migrations/complete", async (request, response, next) => {
   }
 });
 
+function getPublicStorageError(error) {
+  const code = error?.Code ?? error?.code ?? error?.name;
+  switch (code) {
+    case "AccessDenied":
+      return "Neon Object Storage denied the upload. Check that the Cloud Run credential has storage:write permission and was created for the branch used by OBJECT_STORAGE_ENDPOINT.";
+    case "InvalidAccessKeyId":
+      return "Neon Object Storage rejected the access key. Check that Cloud Run uses the full token_id for the matching branch.";
+    case "SignatureDoesNotMatch":
+      return "Neon Object Storage rejected the secret key. Check that Cloud Run uses the matching s3_secret_access_key.";
+    case "NoSuchBucket":
+      return "The configured Object Storage bucket was not found on this branch. Check OBJECT_STORAGE_BUCKET and OBJECT_STORAGE_ENDPOINT.";
+    default:
+      return null;
+  }
+}
+
 app.use((error, _request, response, _next) => {
   console.error(error);
   if (response.headersSent) return response.end();
   const status = Number.isInteger(error.status) ? error.status : 500;
-  const message = status === 500 ? "The server could not complete that request." : error.message;
+  const message =
+    status === 500
+      ? getPublicStorageError(error) ?? "The server could not complete that request."
+      : error.message;
   response.status(status).json({ error: message });
 });
 

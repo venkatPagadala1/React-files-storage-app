@@ -5,7 +5,7 @@ export function VsrLogoMark() {
 
   return (
     <svg
-      className="vsr-logo-glyph"
+      className="vsr-logo-glyph block h-[84%] w-[84%] overflow-visible"
       viewBox="0 0 56 56"
       fill="none"
       aria-hidden="true"
