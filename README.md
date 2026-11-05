@@ -4,6 +4,7 @@ A React and Vite workspace with Firebase Authentication, a UID-scoped Node API o
 
 ## Development
 
+- Install the frontend and API dependencies from the repository root: `npm ci` and `npm ci --prefix server`. Restart any running frontend or API processes after installing dependencies so they use the updated packages.
 - For a local sign-in walkthrough before creating a Firebase project, install a JDK (11 or newer), copy `.env.local.example` to `.env.local`, then open three terminals in the repository:
   1. `npm run dev:auth-emulator` starts Firebase Authentication Emulator with the fake project `demo-vsr-workspace`.
   2. `npm run dev:local-api` starts an in-memory API that accepts only emulator ID tokens and keeps users isolated by UID.

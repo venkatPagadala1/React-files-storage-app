@@ -29,14 +29,22 @@
 
 .file-viewer-stage.expanded .file-viewer-content {
   min-height: 0;
-  flex: 1;
+  flex: 1 1 0%;
+  overflow: auto;
 }
 
 .file-viewer-stage.expanded .file-preview-frame {
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 100%;
   max-height: none;
+  overflow: visible;
+}
+
+.file-viewer-stage.expanded .pdf-preview {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
 }
 
 .file-viewer-stage.expanded .pdf-preview iframe,
@@ -47,7 +55,12 @@
 
 .file-viewer-stage.expanded .docx-preview-frame {
   padding: 20px;
+  overflow: auto;
   background: #e7e9ef;
+}
+
+.file-viewer-stage.expanded .image-preview {
+  place-items: start center;
 }
 
 .file-viewer-stage.expanded .image-preview img {
